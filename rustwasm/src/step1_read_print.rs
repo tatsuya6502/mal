@@ -1,19 +1,22 @@
 use readline::mal_readline;
 
+use types::{MalType, MalResult};
+use reader::read_str;
+use printer::pr_str;
 
 // READ
-fn read(str: String) -> Result<String, String> {
-    Ok(str)
+fn read(str: String) -> MalResult {
+    read_str(str)
 }
 
 // EVAL
-fn eval(ast: String, _env: String) -> Result<String, String> {
+fn eval(ast: MalType, _env: String) -> MalResult {
     Ok(ast)
 }
 
 // PRINT
-fn print(exp: String) -> Result<String, String> {
-    Ok(exp)
+fn print(exp: MalType) -> Result<String, String> {
+    Ok(pr_str(&exp, true))
 }
 
 fn rep(str: String) -> Result<String, String> {

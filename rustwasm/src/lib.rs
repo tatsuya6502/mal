@@ -1,8 +1,13 @@
+extern crate regex;
+
 extern crate libc;
 
 mod readline;
 
-pub mod step0_repl;
 
-#[test]
-fn it_works() {}
+mod types;
+mod reader;
+mod printer;
+
+pub mod step0_repl;
+pub mod step1_read_print;
