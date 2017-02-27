@@ -24,6 +24,6 @@ pub fn pr_str(v: &MalType, print_readably: bool) -> String {
         &MalString(ref v) => format!(r#""{}""#, v),
         &MalNil => "nil".to_string(),
         &MalKeyword(ref v) => format!(":{}", v),
-        _ => unimplemented!(),
+        &MalFunc(_) => "#<function>".to_string(),
     }
 }
