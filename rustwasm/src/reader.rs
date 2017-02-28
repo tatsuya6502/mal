@@ -151,7 +151,11 @@ fn read_atom(reader: &mut Reader) -> Result<MalType, String> {
         return Ok(MalNumber(v));
     }
     if token.starts_with(r#"""#) && token.ends_with(r#"""#) {
-        return Ok(MalString(token[1..token.len() - 1].to_string()));
+        let str = &token[1..token.len() - 1];
+        let str = str.replace("\\\"", "\"")
+            .replace("\\n", "\n")
+            .replace("\\\\", "\\");
+        return Ok(MalString(str));
     }
     if token.starts_with(":") {
         return Ok(MalKeyword(token[1..].to_string()));

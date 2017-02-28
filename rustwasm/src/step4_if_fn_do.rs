@@ -1,8 +1,9 @@
 use readline::mal_readline;
 
-use types;
 use types::{MalType, MalResult};
 use types::MalType::*;
+use types::func_from_lisp;
+use core;
 use env::Env;
 use reader::read_str;
 use printer::pr_str;
@@ -65,7 +66,7 @@ fn eval(ast: MalType, env: Env) -> MalResult {
     }
 
     {
-        let a0 = &list[0];
+        let a0 = list.get(0).unwrap();
         match a0 {
             &MalSymbol(ref v) if v == "def!" => {
                 let key = &list[1];
@@ -104,6 +105,54 @@ fn eval(ast: MalType, env: Env) -> MalResult {
                 let ret = try!(eval(expr.clone(), let_env));
                 return Ok(ret);
             }
+            &MalSymbol(ref v) if v == "do" => {
+                let list = &list[1..];
+                let ret = try!(eval_ast(MalList(list.to_vec()), env));
+                let list = seq!(ret);
+                let tail = &list[list.len() - 1];
+                return Ok(tail.clone());
+            }
+            &MalSymbol(ref v) if v == "if" => {
+                let cond = list.get(1);
+                let cond = match cond {
+                    Some(v) => v,
+                    None => return Err("cond expr is required".to_string()),
+                };
+                let then_expr = list.get(2);
+                let then_expr = match then_expr {
+                    Some(v) => v,
+                    None => return Err("then expr is required".to_string()),
+                };
+                let else_expr = list.get(3);
+
+                let b = match try!(eval(cond.clone(), env.clone())) {
+                    MalBool(false) | MalNil => false,
+                    _ => true,
+                };
+                return if b {
+                    eval(then_expr.clone(), env)
+                } else if let Some(else_expr) = else_expr {
+                    eval(else_expr.clone(), env)
+                } else {
+                    Ok(MalNil)
+                };
+            }
+            &MalSymbol(ref v) if v == "fn*" => {
+                let binds = list.get(1);
+                let binds = match binds {
+                    Some(v) => v,
+                    None => return Err("binds is required".to_string()),
+                };
+                let binds = seq!(binds.clone());
+
+                let exprs = list.get(2);
+                let exprs = match exprs {
+                    Some(v) => v,
+                    None => return Err("exprs is required".to_string()),
+                };
+
+                return func_from_lisp(eval, env, binds, exprs.clone());
+            }
             _ => {}
         };
     }
@@ -133,64 +182,20 @@ fn rep(str: String, env: &Env) -> Result<String, String> {
     print(exp)
 }
 
-fn add(args: Vec<MalType>) -> MalResult {
-    if args.len() != 2 {
-        return Err("+: 2 arguments required".to_string());
-    }
-    match (&args[0], &args[1]) {
-        (&MalNumber(a), &MalNumber(b)) => Ok(MalNumber(a + b)),
-        _ => {
-            Err(format!("unexpected symbol. expected: number & number, actual: {:?}",
-                        args))
-        }
-    }
-}
-
-fn sub(args: Vec<MalType>) -> MalResult {
-    if args.len() != 2 {
-        return Err("+: 2 arguments required".to_string());
-    }
-    match (&args[0], &args[1]) {
-        (&MalNumber(a), &MalNumber(b)) => Ok(MalNumber(a - b)),
-        _ => {
-            Err(format!("unexpected symbol. expected: number & number, actual: {:?}",
-                        args))
-        }
-    }
-}
-
-fn mul(args: Vec<MalType>) -> MalResult {
-    if args.len() != 2 {
-        return Err("+: 2 arguments required".to_string());
-    }
-    match (&args[0], &args[1]) {
-        (&MalNumber(a), &MalNumber(b)) => Ok(MalNumber(a * b)),
-        _ => {
-            Err(format!("unexpected symbol. expected: number & number, actual: {:?}",
-                        args))
-        }
-    }
-}
-
-fn div(args: Vec<MalType>) -> MalResult {
-    if args.len() != 2 {
-        return Err("+: 2 arguments required".to_string());
-    }
-    match (&args[0], &args[1]) {
-        (&MalNumber(a), &MalNumber(b)) => Ok(MalNumber(a / b)),
-        _ => {
-            Err(format!("unexpected symbol. expected: number & number, actual: {:?}",
-                        args))
-        }
-    }
-}
-
 pub fn run() {
     let repl_env = Env::new(None, vec![], vec![]).unwrap();
-    repl_env.set("+".to_string(), types::func_from_bootstrap(add));
-    repl_env.set("-".to_string(), types::func_from_bootstrap(sub));
-    repl_env.set("*".to_string(), types::func_from_bootstrap(mul));
-    repl_env.set("/".to_string(), types::func_from_bootstrap(div));
+
+    // core.EXT: defined using Racket
+    for (key, value) in core::ns().iter() {
+        repl_env.set(key.to_string(), value.clone());
+    }
+
+    // core.mal: defined using the language itself
+    match rep("(def! not (fn* (a) (if a false true)))".to_string(),
+              &repl_env) {
+        Err(x) => panic!("{}", x),
+        _ => {}
+    };
 
     loop {
         let line = mal_readline("user> ");

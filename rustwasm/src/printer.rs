@@ -21,7 +21,16 @@ pub fn pr_str(v: &MalType, print_readably: bool) -> String {
         &MalNumber(ref v) => format!("{}", v),
         &MalSymbol(ref v) => format!("{}", v),
         &MalBool(v) => format!("{}", v),
-        &MalString(ref v) => format!(r#""{}""#, v),
+        &MalString(ref v) => {
+            if print_readably {
+                let v = v.replace("\\", "\\\\")
+                    .replace("\"", "\\\"")
+                    .replace("\n", "\\n");
+                format!(r#""{}""#, v)
+            } else {
+                v.to_string()
+            }
+        }
         &MalNil => "nil".to_string(),
         &MalKeyword(ref v) => format!(":{}", v),
         &MalFunc(_) => "#<function>".to_string(),

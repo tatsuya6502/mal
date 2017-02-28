@@ -73,10 +73,10 @@ fn eval(ast: MalType, env: &Env) -> MalResult {
 
     let f = &list[0];
     let f = match f {
-        &MalFunc(f) => f,
+        &MalFunc(ref f) => f,
         _ => return Err(format!("unexpected symbol. expected: function, actual: {:?}", f)),
     };
-    f((&list[1..]).to_vec())
+    f.apply((&list[1..]).to_vec())
 }
 
 // PRINT
