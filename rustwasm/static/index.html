@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Mal on the Rust+WebAssembly</title>
+    <meta charset="UTF-8">
+</head>
+
+<body>
+    <h2>Mal on the Rust+WebAssembly</h2>
+
+    <input id="input"><button id="exec">exec</button><br>
+    <pre id="output"></pre>
+
+    <script type='text/javascript'>
+        "use strict";
+
+        const namePrefix = "lib";
+        var Module = {
+            preRun: [],
+            postRun: [],
+            wasmBinaryFile: `${namePrefix}.wasm`,
+            noInitialRun: true, // don't run `fn main()`. but we can call `pub fn add(a: i32, b: i32) -> i32`.
+            print: text => {
+                console.log(text);
+            },
+            printErr: text => {
+                console.warn(text);
+            },
+        };
+        fetch(`${namePrefix}.wasm`)
+            .then(resp => resp.arrayBuffer())
+            .then(ab => {
+                Module.wasmBinary = ab;
+
+                return new Promise(resolve => {
+                    const script = document.createElement("script");
+                    script.src = `${namePrefix}.js`;
+                    script.addEventListener("load", resolve);
+                    document.body.appendChild(script);
+                });
+            })
+            .then(() => {
+                const cNewReplEnv = Module.cwrap("c_new_repl_env", "number", []);
+                const cEnvFree = Module.cwrap("c_env_free", void 0, ["number"]);
+                const cREP = Module.cwrap("c_rep", void 0, ["number", "string", "number"]);
+
+                class Mal {
+                    constructor() {
+                        this.envPtr = cNewReplEnv();
+                    }
+
+                    rep(expr, callback) {
+                        let funcPtr = 0;
+                        const wrapper = (malResultPtr, malErrorPtr, malStdoutPtr) => {
+                            const malResult = Pointer_stringify(malResultPtr);
+                            const malError = Pointer_stringify(malErrorPtr);
+                            const malStdout = Pointer_stringify(malStdoutPtr);
+
+                            callback({
+                                result: malResult,
+                                error: malError,
+                                stdout: malStdout,
+                            });
+
+                            if (funcPtr) {
+                                Runtime.removeFunction(funcPtr);
+                                funcPtr = 0;
+                            }
+                        };
+                        funcPtr = Runtime.addFunction(wrapper);
+                        cREP(this.envPtr, expr, funcPtr);
+                    }
+
+                    drop() {
+                        cEnvFree(this.envPtr);
+                    }
+                }
+
+                window.Mal = Mal;
+                const mal = new Mal();
+                window.mal = mal;
+
+                const inputEl = document.querySelector("#input");
+                const execEl = document.querySelector("#exec");
+                const outputEl = document.querySelector("#output");
+
+                execEl.addEventListener("click", () => {
+                    const input = inputEl.value;
+                    mal.rep(input, ret => {
+                        const {result, error, stdout} = ret;
+                        outputEl.innerText += "user> " + input + "\n";
+                        if (!error) {
+                            outputEl.innerText += result + "\n";
+                            outputEl.innerText += stdout + "\n";
+                        } else {
+                            outputEl.innerText += error + "\n";
+                        }
+                    });
+                });
+            });
+    </script>
+</body>
+
+</html>

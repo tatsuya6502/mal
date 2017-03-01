@@ -108,7 +108,7 @@ mod normal {
 
 #[cfg(target_arch="wasm32")]
 mod jsbridge {
-    pub fn mal_readline(prompt: &str) -> Option<String> {
+    pub fn mal_readline(_prompt: &str) -> Option<String> {
         unimplemented!()
     }
 }

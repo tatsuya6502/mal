@@ -1,3 +1,4 @@
+#[cfg(not(target_arch="wasm32"))]
 use regex::Regex;
 
 use types::MalType;
@@ -38,6 +39,7 @@ pub fn read_str(input: String) -> Result<MalType, String> {
     read_form(&mut reader)
 }
 
+#[cfg(not(target_arch="wasm32"))]
 fn tokenizer(str: String) -> Vec<String> {
     let regexp =
         Regex::new(r##"[\s,]*(~@|[\[\]{}()'`~^@]|"(?:\\.|[^\\"])*"|;.*|[^\s\[\]{}('"`,;)]*)"##)
@@ -54,6 +56,62 @@ fn tokenizer(str: String) -> Vec<String> {
         tokens.push(group.to_owned());
     }
     tokens
+}
+
+#[cfg(target_arch="wasm32")]
+mod jstokenizer {
+    // regexp crate is so big binary.
+    // If we can use RegExp class in JS, We use that one.
+
+    use std::ffi::{CString, CStr};
+    use std::os::raw::c_char;
+
+    // in .cargo/config... #[link_args = "--js-library static/emcc-bind.js"]
+    #[allow(improper_ctypes)]
+    extern "C" {
+        fn js_tokenizer(tokenizer: *mut JSTokenizer, str: *const c_char);
+    }
+
+    pub struct JSTokenizer {
+        pub list: Vec<String>,
+    }
+
+    impl JSTokenizer {
+        pub fn new() -> JSTokenizer {
+            JSTokenizer { list: vec![] }
+        }
+
+        pub fn call_js(&mut self, str: String) -> Vec<String> {
+            let str = CString::new(str).unwrap().into_raw();
+
+            unsafe { js_tokenizer(self, str) };
+
+            unsafe { CString::from_raw(str) };
+
+            let mut ret_vec = vec![];
+            for str in self.list.clone() {
+                ret_vec.push(str.to_string());
+            }
+            ret_vec
+        }
+    }
+
+    #[no_mangle]
+    pub fn c_jstokenizer_append(ptr: *mut JSTokenizer, v: *const c_char) {
+        let mut container: &mut JSTokenizer = unsafe { &mut *ptr };
+        let v = unsafe { CStr::from_ptr(v) };
+        let v = v.to_str().unwrap();
+        container.list.push(v.to_string());
+    }
+}
+
+#[cfg(target_arch="wasm32")]
+#[no_mangle]
+pub use self::jstokenizer::c_jstokenizer_append;
+
+#[cfg(target_arch="wasm32")]
+fn tokenizer(str: String) -> Vec<String> {
+    jstokenizer::JSTokenizer::new().call_js(str)
 }
 
 fn read_form(reader: &mut Reader) -> Result<MalType, String> {

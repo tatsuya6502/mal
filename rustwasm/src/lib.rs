@@ -1,3 +1,4 @@
+#[cfg(not(target_arch="wasm32"))]
 extern crate regex;
 
 extern crate libc;
@@ -16,10 +17,10 @@ macro_rules! seq {
     )
 }
 
-mod types;
+pub mod types;
 mod core;
-mod env;
-mod reader;
+pub mod env;
+pub mod reader;
 mod printer;
 
 pub mod step0_repl;
