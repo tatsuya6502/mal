@@ -2,7 +2,7 @@ use readline::mal_readline;
 
 use types::{MalType, MalResult};
 use reader::read_str;
-use printer::pr_str;
+use printer::{pr_str, println};
 
 // READ
 fn read(str: String) -> MalResult {
@@ -33,8 +33,8 @@ pub fn run() {
         }
         let result = rep(line.unwrap());
         match result {
-            Ok(message) => println!("{}", message),
-            Err(message) => println!("{}", message),
+            Ok(message) => println(message),
+            Err(message) => println(message),
         }
     }
 }

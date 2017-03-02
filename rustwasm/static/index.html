@@ -44,23 +44,33 @@
                 const cNewReplEnv = Module.cwrap("c_new_repl_env", "number", []);
                 const cEnvFree = Module.cwrap("c_env_free", void 0, ["number"]);
                 const cREP = Module.cwrap("c_rep", void 0, ["number", "string", "number"]);
+                const cSetStdoutln = Module.cwrap("c_set_stdoutln", void 0, ["number"]);
 
                 class Mal {
                     constructor() {
                         this.envPtr = cNewReplEnv();
+                        this.stdoutFuncPtr = Runtime.addFunction(ptr => {
+                            const stdout = Module.Pointer_stringify(ptr);
+                            if (this.stdoutCallback) {
+                                this.stdoutCallback(stdout);
+                            }
+                        });
+                        cSetStdoutln(this.stdoutFuncPtr);
+                    }
+
+                    setStdoutListener(callback) {
+                        this.stdoutCallback = callback;
                     }
 
                     rep(expr, callback) {
                         let funcPtr = 0;
-                        const wrapper = (malResultPtr, malErrorPtr, malStdoutPtr) => {
-                            const malResult = Pointer_stringify(malResultPtr);
-                            const malError = Pointer_stringify(malErrorPtr);
-                            const malStdout = Pointer_stringify(malStdoutPtr);
+                        const wrapper = (malResultPtr, malErrorPtr) => {
+                            const malResult = Module.Pointer_stringify(malResultPtr);
+                            const malError = Module.Pointer_stringify(malErrorPtr);
 
                             callback({
                                 result: malResult,
                                 error: malError,
-                                stdout: malStdout,
                             });
 
                             if (funcPtr) {
@@ -73,6 +83,8 @@
                     }
 
                     drop() {
+                        cSetStdoutln(0);
+                        Runtime.removeFunction(this.stdoutFuncPtr);
                         cEnvFree(this.envPtr);
                     }
                 }
@@ -85,14 +97,17 @@
                 const execEl = document.querySelector("#exec");
                 const outputEl = document.querySelector("#output");
 
+                mal.setStdoutListener(stdout => {
+                    outputEl.innerText += stdout + "\n";
+                });
+
                 execEl.addEventListener("click", () => {
                     const input = inputEl.value;
+                    outputEl.innerText += "user> " + input + "\n";
                     mal.rep(input, ret => {
-                        const {result, error, stdout} = ret;
-                        outputEl.innerText += "user> " + input + "\n";
+                        const {result, error} = ret;
                         if (!error) {
                             outputEl.innerText += result + "\n";
-                            outputEl.innerText += stdout + "\n";
                         } else {
                             outputEl.innerText += error + "\n";
                         }

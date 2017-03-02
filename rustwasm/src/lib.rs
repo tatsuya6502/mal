@@ -21,7 +21,7 @@ pub mod types;
 mod core;
 pub mod env;
 pub mod reader;
-mod printer;
+pub mod printer;
 
 pub mod step0_repl;
 pub mod step1_read_print;

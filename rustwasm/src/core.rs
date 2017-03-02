@@ -5,7 +5,7 @@ use types::MalType;
 use types::MalType::*;
 use types::MalResult;
 
-use printer::pr_str as printer_pr_str;
+use printer::{pr_str as printer_pr_str, println as printer_println};
 
 fn pr_str(args: Vec<MalType>) -> MalResult {
     let ret = args.iter().map(|v| printer_pr_str(v, true)).collect::<Vec<_>>().join(" ");
@@ -19,13 +19,13 @@ fn str(args: Vec<MalType>) -> MalResult {
 
 fn prn(args: Vec<MalType>) -> MalResult {
     let ret = args.iter().map(|v| printer_pr_str(v, true)).collect::<Vec<_>>().join(" ");
-    println!("{}", ret);
+    printer_println(ret);
     Ok(MalNil)
 }
 
 fn println(args: Vec<MalType>) -> MalResult {
     let ret = args.iter().map(|v| printer_pr_str(v, false)).collect::<Vec<_>>().join(" ");
-    println!("{}", ret);
+    printer_println(ret);
     Ok(MalNil)
 }
 

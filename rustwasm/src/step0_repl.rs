@@ -1,5 +1,6 @@
 use readline::mal_readline;
 
+use printer::println;
 
 // READ
 fn read(str: String) -> Result<String, String> {
@@ -30,8 +31,8 @@ pub fn run() {
         }
         let result = rep(line.unwrap());
         match result {
-            Ok(message) => println!("{}", message),
-            Err(message) => println!("{}", message),
+            Ok(message) => println(message),
+            Err(message) => println(message),
         }
     }
 }
