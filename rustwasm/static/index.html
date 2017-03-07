@@ -4,13 +4,16 @@
 <head>
     <title>Mal on the Rust+WebAssembly</title>
     <meta charset="UTF-8">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.terminal/1.0.10/js/jquery.terminal.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/jquery.terminal/1.0.10/css/jquery.terminal.css" rel="stylesheet" />
 </head>
 
 <body>
     <h2>Mal on the Rust+WebAssembly</h2>
 
-    <input id="input"><button id="exec">exec</button><br>
-    <pre id="output"></pre>
+    <div id="terminal"></div>
 
     <script type='text/javascript'>
         "use strict";
@@ -20,7 +23,7 @@
             preRun: [],
             postRun: [],
             wasmBinaryFile: `${namePrefix}.wasm`,
-            noInitialRun: true, // don't run `fn main()`. but we can call `pub fn add(a: i32, b: i32) -> i32`.
+            noInitialRun: true,
             print: text => {
                 console.log(text);
             },
@@ -93,26 +96,47 @@
                 const mal = new Mal();
                 window.mal = mal;
 
-                const inputEl = document.querySelector("#input");
-                const execEl = document.querySelector("#exec");
-                const outputEl = document.querySelector("#output");
+                class MalTerminal {
+                    constructor({el, prompt, mal}) {
+                        this.el = el || document.querySelector("#terminal");
+                        this.prompt = prompt || "user> ";
+                        this.mal = mal;
+                    }
 
-                mal.setStdoutListener(stdout => {
-                    outputEl.innerText += stdout + "\n";
-                });
+                    open() {
+                        const opts = {
+                            height: 200,
+                            width: 450,
+                            prompt: this.prompt,
+                            greetings: "Mal on Rust+WebAssembly (https://github.com/kanaka/mal)",
+                            name: "",
+                        };
+                        this.term = jQuery(this.el).terminal((command, term) => {
+                            this.onLine(command);
+                        }, opts);
 
-                execEl.addEventListener("click", () => {
-                    const input = inputEl.value;
-                    outputEl.innerText += "user> " + input + "\n";
-                    mal.rep(input, ret => {
-                        const {result, error} = ret;
-                        if (!error) {
-                            outputEl.innerText += result + "\n";
-                        } else {
-                            outputEl.innerText += error + "\n";
-                        }
-                    });
-                });
+                        this.mal.setStdoutListener(stdout => {
+                            this.term.echo(stdout);
+                        });
+                    }
+
+                    onLine(input) {
+                        mal.rep(input, ret => {
+                            const {result, error} = ret;
+                            if (!error) {
+                                this.term.echo(result);
+                            } else {
+                                this.term.echo(error);
+                            }
+                        });
+                    }
+                }
+
+                window.MalTerminal = MalTerminal;
+                const el = document.querySelector("#terminal");
+                const terminal = new MalTerminal({ el, mal });
+                terminal.open();
+                window.malTerminal = terminal;
             });
     </script>
 </body>
