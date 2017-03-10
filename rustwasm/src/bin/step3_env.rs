@@ -1,6 +1,6 @@
 extern crate mal;
 
-use mal::step3_env::run;
+use mal::step3_env_run as run;
 
 fn main() {
     run()

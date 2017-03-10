@@ -84,7 +84,7 @@ fn print(exp: MalType) -> Result<String, String> {
     Ok(pr_str(&exp, true))
 }
 
-fn rep(str: String, env: &Env) -> Result<String, String> {
+pub fn rep(str: String, env: &Env) -> Result<String, String> {
     let ast = try!(read(str));
     let exp = try!(eval(ast, env));
     print(exp)

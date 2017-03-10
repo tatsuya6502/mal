@@ -57,6 +57,15 @@ impl MalFuncData {
             Err("undefined function".to_string())
         }
     }
+
+    pub fn tco_apply(&self, args: Vec<MalType>) -> Result<Option<(MalType, Env)>, String> {
+        if let Some(ref data) = self.closure {
+            let new_env = try!(Env::new(Some(data.env.clone()), data.params.clone(), args));
+            Ok(Some((data.ast.clone(), new_env)))
+        } else {
+            Ok(None)
+        }
+    }
 }
 
 pub fn func_from_bootstrap(f: MalF) -> MalType {

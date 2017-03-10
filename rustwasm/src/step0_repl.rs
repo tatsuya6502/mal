@@ -17,7 +17,7 @@ fn print(exp: String) -> Result<String, String> {
     Ok(exp)
 }
 
-fn rep(str: String) -> Result<String, String> {
+pub fn rep(str: String) -> Result<String, String> {
     let ast = try!(read(str));
     let exp = try!(eval(ast, "".to_string()));
     print(exp)

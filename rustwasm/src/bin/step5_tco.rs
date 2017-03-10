@@ -1,6 +1,6 @@
 extern crate mal;
 
-use mal::step0_repl_run as run;
+use mal::step5_tco_run as run;
 
 fn main() {
     run()

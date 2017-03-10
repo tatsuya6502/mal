@@ -1,8 +1,5 @@
 use readline::mal_readline;
 
-use std::ffi::{CString, CStr};
-use std::os::raw::c_char;
-
 use types::{MalType, MalResult};
 use types::MalType::*;
 use types::func_from_lisp;
@@ -179,7 +176,7 @@ fn print(exp: MalType) -> Result<String, String> {
     Ok(pr_str(&exp, true))
 }
 
-fn rep(str: String, env: &Env) -> Result<String, String> {
+pub fn rep(str: String, env: &Env) -> Result<String, String> {
     let ast = try!(read(str));
     let exp = try!(eval(ast, env.clone()));
     print(exp)
@@ -201,49 +198,6 @@ pub fn new_repl_env() -> Env {
     };
 
     repl_env
-}
-
-#[no_mangle]
-pub fn c_new_repl_env() -> *mut Env {
-    let repl_env = new_repl_env();
-
-    Box::into_raw(Box::new(repl_env)) as *mut Env
-}
-
-#[no_mangle]
-pub fn c_env_free(ptr: *mut Env) {
-    unsafe { Box::from_raw(ptr) };
-}
-
-#[no_mangle]
-pub fn c_rep(ptr: *mut Env,
-             v: *const c_char,
-             f: extern "C" fn(*const c_char, *const c_char, *const c_char)) {
-    let env = unsafe { &mut *ptr };
-
-    let v = unsafe { CStr::from_ptr(v) };
-    let v = v.to_str().unwrap().to_string();
-
-    let ret = rep(v, env);
-    let mal_result = match ret {
-        Ok(ref v) => v.to_string(),
-        _ => "".to_string(),
-    };
-    let mal_error = match ret {
-        Err(ref v) => v.to_string(),
-        _ => "".to_string(),
-    };
-    let stdout = "".to_string();
-
-    let mal_result = CString::new(mal_result).unwrap().into_raw();
-    let mal_error = CString::new(mal_error).unwrap().into_raw();
-    let stdout = CString::new(stdout).unwrap().into_raw();
-    f(mal_result, mal_error, stdout);
-    unsafe {
-        CString::from_raw(mal_result);
-        CString::from_raw(mal_error);
-        CString::from_raw(stdout);
-    }
 }
 
 pub fn run() {
