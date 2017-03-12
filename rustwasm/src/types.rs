@@ -1,4 +1,6 @@
 use std::fmt;
+use std::rc::Rc;
+use std::cell::RefCell;
 
 use printer::pr_str;
 
@@ -20,6 +22,7 @@ pub enum MalType {
     MalNil,
     MalBool(bool),
     MalFunc(MalFuncData),
+    MalAtom(Rc<RefCell<MalType>>),
 }
 
 impl fmt::Debug for MalType {
@@ -35,6 +38,9 @@ pub struct MalFuncData {
 
     // from lisp
     closure: Option<Box<MalFuncDataFromLisp>>,
+
+    // eval
+    eval: Option<Box<MalFuncDataForEval>>,
 }
 
 #[derive(PartialEq, Eq, Clone)]
@@ -45,6 +51,12 @@ struct MalFuncDataFromLisp {
     ast: MalType,
 }
 
+#[derive(PartialEq, Eq, Clone)]
+struct MalFuncDataForEval {
+    eval: fn(ast: MalType, env: Env) -> MalResult,
+    env: Env,
+}
+
 impl MalFuncData {
     pub fn apply(&self, args: Vec<MalType>) -> MalResult {
         if let Some(func) = self.func {
@@ -53,6 +65,12 @@ impl MalFuncData {
             let new_env =
                 try!(Env::new(Some(container.env.clone()), container.params.clone(), args));
             (container.eval)(container.ast.clone(), new_env)
+        } else if let Some(ref container) = self.eval {
+            if args.len() != 1 {
+                return Err(format!("unexpected argument length. expected: 1, actual: {}",
+                                   args.len()));
+            }
+            (container.eval)(args.get(0).unwrap().clone(), container.env.clone())
         } else {
             Err("undefined function".to_string())
         }
@@ -72,6 +90,7 @@ pub fn func_from_bootstrap(f: MalF) -> MalType {
     MalFunc(MalFuncData {
         func: Some(f),
         closure: None,
+        eval: None,
     })
 }
 
@@ -97,5 +116,17 @@ pub fn func_from_lisp(eval: fn(ast: MalType, env: Env) -> MalResult,
             ast: exprs,
             params: bind_strs,
         })),
+        eval: None,
     }))
+}
+
+pub fn func_for_eval(eval: fn(ast: MalType, env: Env) -> MalResult, env: Env) -> MalType {
+    MalFunc(MalFuncData {
+        func: None,
+        closure: None,
+        eval: Some(Box::new(MalFuncDataForEval {
+            eval: eval,
+            env: env,
+        })),
+    })
 }

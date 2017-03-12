@@ -88,5 +88,6 @@ pub fn pr_str(v: &MalType, print_readably: bool) -> String {
         &MalNil => "nil".to_string(),
         &MalKeyword(ref v) => format!(":{}", v),
         &MalFunc(_) => "#<function>".to_string(),
+        &MalAtom(ref v) => format!("(atom {})", pr_str(&v.borrow(), print_readably)),
     }
 }
