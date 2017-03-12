@@ -95,6 +95,32 @@ fn is_list(args: Vec<MalType>) -> MalResult {
     Ok(MalBool(ret))
 }
 
+fn cons(args: Vec<MalType>) -> MalResult {
+    if args.len() != 2 {
+        return Err("reset!: 2 arguments required".to_string());
+    }
+    let v = args.get(0).unwrap();
+    let list = args.get(1).unwrap();
+
+    let list = seq!(list.clone());
+
+    let mut ret = vec![v.clone()];
+    ret.extend(list.iter().cloned());
+
+    Ok(MalList(ret))
+}
+
+fn concat(args: Vec<MalType>) -> MalResult {
+    let mut list = vec![];
+
+    for v in args {
+        let v = seq!(v);
+        list.extend(v);
+    }
+
+    Ok(MalList(list))
+}
+
 fn is_empty(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
         return Err("empty?: 1 argument required".to_string());
@@ -345,6 +371,9 @@ pub fn ns() -> HashMap<String, MalType> {
     ns.insert("slurp".to_string(), func_from_bootstrap(slurp));
     ns.insert("list".to_string(), func_from_bootstrap(list));
     ns.insert("list?".to_string(), func_from_bootstrap(is_list));
+
+    ns.insert("cons".to_string(), func_from_bootstrap(cons));
+    ns.insert("concat".to_string(), func_from_bootstrap(concat));
     ns.insert("empty?".to_string(), func_from_bootstrap(is_empty));
     ns.insert("count".to_string(), func_from_bootstrap(count));
 
