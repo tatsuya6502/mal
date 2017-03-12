@@ -142,7 +142,7 @@ fn eval(ast: MalType, env: Env) -> MalResult {
                     return Ok(env.set(key.to_string(), ret));
                 }
                 &MalSymbol(ref v) if v == "let*" => {
-                    let let_env = try!(Env::new(Some(env.clone()), vec![], vec![]));
+                    env = try!(Env::new(Some(env.clone()), vec![], vec![]));
                     let pairs = &list[1];
                     let expr = &list[2];
                     let list = seq!(pairs.clone());
@@ -160,7 +160,7 @@ fn eval(ast: MalType, env: Env) -> MalResult {
                                                    key))
                             }
                         };
-                        let_env.set(key.to_string(), try!(eval(value.clone(), let_env.clone())));
+                        env.set(key.to_string(), try!(eval(value.clone(), env.clone())));
                     }
 
                     ast = expr.clone();

@@ -121,6 +121,71 @@ fn concat(args: Vec<MalType>) -> MalResult {
     Ok(MalList(list))
 }
 
+fn nth(args: Vec<MalType>) -> MalResult {
+    if args.len() != 2 {
+        return Err("nth: 2 arguments are required".to_string());
+    }
+
+    let list = args.get(0).unwrap();
+    let idx = args.get(1).unwrap();
+
+    let list = seq!(list.clone());
+
+    let idx = match idx {
+        &MalNumber(v) => v,
+        _ => return Err(format!("unexpected symbol. expected: number , actual: {:?}", idx)),
+    };
+
+    let v = match list.get(idx as usize) {
+        Some(v) => v,
+        None => return Err("nth: index out of range".to_string()),
+    };
+
+    Ok(v.clone())
+}
+
+fn first(args: Vec<MalType>) -> MalResult {
+    if args.len() < 1 {
+        return Err("first: 1 or more argument(s) is required".to_string());
+    }
+
+    let list = args.get(0).unwrap();
+
+    match list {
+        &MalNil => return Ok(MalNil),
+        _ => {}
+    };
+
+    let list = seq!(list.clone());
+
+    let ret = list.get(0);
+    let ret = match ret {
+        Some(v) => v,
+        None => return Ok(MalNil),
+    };
+    Ok(ret.clone())
+}
+
+fn rest(args: Vec<MalType>) -> MalResult {
+    if args.len() < 1 {
+        return Err("rest: 1 or more argument(s) is required".to_string());
+    }
+
+    let list = args.get(0).unwrap();
+
+    match list {
+        &MalNil => return Ok(MalList(vec![])),
+        _ => {}
+    };
+
+    let list = seq!(list.clone());
+    if list.len() == 0 {
+        return Ok(MalList(vec![]));
+    }
+
+    Ok(MalList((&list[1..]).to_vec()))
+}
+
 fn is_empty(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
         return Err("empty?: 1 argument required".to_string());
@@ -374,6 +439,9 @@ pub fn ns() -> HashMap<String, MalType> {
 
     ns.insert("cons".to_string(), func_from_bootstrap(cons));
     ns.insert("concat".to_string(), func_from_bootstrap(concat));
+    ns.insert("nth".to_string(), func_from_bootstrap(nth));
+    ns.insert("first".to_string(), func_from_bootstrap(first));
+    ns.insert("rest".to_string(), func_from_bootstrap(rest));
     ns.insert("empty?".to_string(), func_from_bootstrap(is_empty));
     ns.insert("count".to_string(), func_from_bootstrap(count));
 

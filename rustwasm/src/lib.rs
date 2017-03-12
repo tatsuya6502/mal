@@ -31,6 +31,7 @@ mod step4_if_fn_do;
 mod step5_tco;
 mod step6_file;
 mod step7_quote;
+mod step8_macros;
 
 pub use step0_repl::run as step0_repl_run;
 pub use step1_read_print::run as step1_read_print_run;
@@ -40,10 +41,11 @@ pub use step4_if_fn_do::run as step4_if_fn_do_run;
 pub use step5_tco::run as step5_tco_run;
 pub use step6_file::run as step6_file_run;
 pub use step7_quote::run as step7_quote_run;
+pub use step8_macros::run as step8_macros_run;
 
 #[cfg(target_arch="wasm32")]
 pub mod wasm {
-    use step7_quote as latest_step;
+    use step8_macros as latest_step;
 
     use std::ffi::{CString, CStr};
     use std::os::raw::c_char;

@@ -5,7 +5,7 @@ use readline::mal_readline;
 
 use types::{MalType, MalResult};
 use types::MalType::*;
-use types::{func_from_lisp, func_for_eval};
+use types::{func_from_lisp, func_for_eval, macro_from_lisp};
 use core;
 use env::Env;
 use reader::read_str;
@@ -14,6 +14,114 @@ use printer::{pr_str, println};
 // READ
 fn read(str: String) -> MalResult {
     read_str(str)
+}
+
+fn is_pair(ast: MalType) -> bool {
+    match ast {
+        MalList(list) | MalVector(list) => list.len() != 0,
+        _ => false,
+    }
+}
+
+fn is_macro(ast: MalType, env: Env) -> bool {
+    let list = match ast {
+        MalList(list) | MalVector(list) => list,
+        _ => return false,
+    };
+
+    let symbol = match list.get(0) {
+        Some(&MalSymbol(ref symbol)) => symbol,
+        _ => return false,
+    };
+
+    let env = match env.find(symbol.clone()) {
+        Some(v) => v,
+        None => return false,
+    };
+
+    let f = match env.get(symbol.clone()) {
+        Some(v) => v,
+        None => return false,
+    };
+    let f = match f {
+        MalFunc(v) => v,
+        _ => return false,
+    };
+
+    f.is_macro()
+}
+
+fn macroexpand(ast: MalType, env: Env) -> MalResult {
+    let mut ast = ast;
+    while is_macro(ast.clone(), env.clone()) {
+        let list = seq!(ast);
+
+        if list.len() < 1 {
+            return Err("macroexpand: 1 or more argument(s) is required".to_string());
+        }
+
+        let symbol = list.get(0).unwrap();
+        let symbol = match symbol {
+            &MalSymbol(ref v) => v,
+            _ => return Err(format!("unexpected symbol. expected: symbol, actual: {:?}", symbol)),
+        };
+
+        let f = env.get(symbol.to_string());
+        let f = match f {
+            Some(MalFunc(ref v)) => v,
+            _ => return Err(format!("unexpected symbol. expected: function, actual: {:?}", f)),
+        };
+
+        ast = try!(f.apply((&list[1..]).to_vec()));
+    }
+
+    Ok(ast)
+}
+
+fn quasiquote(ast: MalType) -> MalResult {
+    if !is_pair(ast.clone()) {
+        return Ok(MalList(vec![MalSymbol("quote".to_string()), ast.clone()]));
+    }
+
+    let list = seq!(ast);
+
+    let arg1 = match list.get(0) {
+        Some(ast) => ast,
+        None => return Err("quasiquote: 1 or 2 argument(s) required".to_string()),
+    };
+    if let &MalSymbol(ref symbol) = arg1 {
+        if symbol == "unquote" {
+            match list.get(1) {
+                Some(ast) => return Ok(ast.clone()),
+                None => return Err("unquote: 1 argument required".to_string()),
+            };
+        }
+    }
+
+    if is_pair(arg1.clone()) {
+        let arg1_list = seq!(arg1.clone());
+        match arg1_list.get(0) {
+            Some(arg11) => {
+                if let &MalSymbol(ref symbol) = arg11 {
+                    if symbol == "splice-unquote" {
+                        let arg12 = match arg1_list.get(1) {
+                            Some(ast) => ast,
+                            None => return Err("splice-unquote: 1 argument required".to_string()),
+                        };
+                        return Ok(MalList(vec![MalSymbol("concat".to_string()),
+                                               arg12.clone(),
+                                               try!(quasiquote(MalList((&list[1..]).to_vec())))]));
+                    }
+                }
+            }
+            None => {}
+        };
+
+    }
+
+    Ok(MalList(vec![MalSymbol("cons".to_string()),
+                    try!(quasiquote(arg1.clone())),
+                    try!(quasiquote(MalList((&list[1..]).to_vec())))]))
 }
 
 fn eval_ast(ast: MalType, env: Env) -> MalResult {
@@ -64,10 +172,17 @@ fn eval(ast: MalType, env: Env) -> MalResult {
     let mut env: Env = env;
 
     'tco: loop {
+        match ast {
+            MalList(_) => {}
+            _ => return eval_ast(ast.clone(), env),
+        };
+
+        ast = try!(macroexpand(ast, env.clone()));
         let list = match ast {
             MalList(list) => list,
             _ => return eval_ast(ast.clone(), env),
         };
+
         if list.len() == 0 {
             return Ok(MalList(list));
         }
@@ -112,6 +227,62 @@ fn eval(ast: MalType, env: Env) -> MalResult {
 
                     ast = expr.clone();
                     continue 'tco;
+                }
+                &MalSymbol(ref v) if v == "quote" => {
+                    let arg = list.get(1);
+                    let arg = match arg {
+                        Some(v) => v,
+                        None => return Err("quote argument is required".to_string()),
+                    };
+                    return Ok(arg.clone());
+                }
+                &MalSymbol(ref v) if v == "quasiquote" => {
+                    let arg = list.get(1);
+                    let arg = match arg {
+                        Some(v) => v,
+                        None => return Err("quasiquote argument is required".to_string()),
+                    };
+                    ast = try!(quasiquote(arg.clone()));
+                    continue 'tco;
+                }
+                &MalSymbol(ref v) if v == "defmacro!" => {
+                    let key = list.get(1);
+                    let key = match key {
+                        Some(v) => v,
+                        None => return Err("key is required".to_string()),
+                    };
+                    let symbol = match key {
+                        &MalSymbol(ref str) => str,
+                        _ => {
+                            return Err(format!("unexpected symbol. expected: symbol, actual: {:?}",
+                                               key))
+                        }
+                    };
+                    let value = list.get(2);
+                    let value = match value {
+                        Some(v) => v,
+                        None => return Err("value expr is required".to_string()),
+                    };
+
+                    let f = try!(eval(value.clone(), env.clone()));
+                    let f = match f {
+                        MalFunc(ref v) => v,
+                        _ => {
+                            return Err(format!("unexpected symbol. expected: function, actual: \
+                                                {:?}",
+                                               f))
+                        }
+                    };
+                    let f = try!(macro_from_lisp(f.clone()));
+                    return Ok(env.set(symbol.to_string(), f));
+                }
+                &MalSymbol(ref v) if v == "macroexpand" => {
+                    let v = list.get(1);
+                    let v = match v {
+                        Some(v) => v,
+                        None => return Err("value is required".to_string()),
+                    };
+                    return macroexpand(v.clone(), env);
                 }
                 &MalSymbol(ref v) if v == "do" => {
                     let len = list.len();
@@ -215,6 +386,18 @@ pub fn new_repl_env() -> Env {
         _ => {}
     };
     match rep(r##"(def! load-file (fn* (f) (eval (read-string (str "(do " (slurp f) ")")))))"##
+                  .to_string(),
+              &repl_env) {
+        Err(x) => panic!("{}", x),
+        _ => {}
+    };
+    match rep(r##"(defmacro! cond (fn* (& xs) (if (> (count xs) 0) (list 'if (first xs) (if (> (count xs) 1) (nth xs 1) (throw "odd number of forms to cond")) (cons 'cond (rest (rest xs)))))))"##
+                  .to_string(),
+              &repl_env) {
+        Err(x) => panic!("{}", x),
+        _ => {}
+    };
+    match rep(r##"(defmacro! or (fn* (& xs) (if (empty? xs) nil (if (= 1 (count xs)) (first xs) `(let* (or_FIXME ~(first xs)) (if or_FIXME or_FIXME (or ~@(rest xs))))))))"##
                   .to_string(),
               &repl_env) {
         Err(x) => panic!("{}", x),

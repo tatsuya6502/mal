@@ -49,6 +49,7 @@ struct MalFuncDataFromLisp {
     env: Env,
     params: Vec<String>,
     ast: MalType,
+    is_macro: bool,
 }
 
 #[derive(PartialEq, Eq, Clone)]
@@ -84,6 +85,14 @@ impl MalFuncData {
             Ok(None)
         }
     }
+
+    pub fn is_macro(&self) -> bool {
+        if let Some(ref container) = self.closure {
+            container.is_macro
+        } else {
+            false
+        }
+    }
 }
 
 pub fn func_from_bootstrap(f: MalF) -> MalType {
@@ -115,6 +124,26 @@ pub fn func_from_lisp(eval: fn(ast: MalType, env: Env) -> MalResult,
             env: env,
             ast: exprs,
             params: bind_strs,
+            is_macro: false,
+        })),
+        eval: None,
+    }))
+}
+
+pub fn macro_from_lisp(func_data: MalFuncData) -> MalResult {
+    let data = match func_data.closure {
+        Some(v) => v,
+        None => return Err("unexpected function pattern".to_string()),
+    };
+
+    Ok(MalFunc(MalFuncData {
+        func: None,
+        closure: Some(Box::new(MalFuncDataFromLisp {
+            eval: data.clone().eval,
+            env: data.clone().env,
+            ast: data.clone().ast,
+            params: data.clone().params,
+            is_macro: true,
         })),
         eval: None,
     }))
