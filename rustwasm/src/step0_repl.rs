@@ -1,5 +1,6 @@
 use readline::mal_readline;
 
+use types::MalError;
 use printer::println;
 
 // READ
@@ -13,11 +14,11 @@ fn eval(ast: String, _env: String) -> Result<String, String> {
 }
 
 // PRINT
-fn print(exp: String) -> Result<String, String> {
+fn print(exp: String) -> Result<String, MalError> {
     Ok(exp)
 }
 
-pub fn rep(str: String) -> Result<String, String> {
+pub fn rep(str: String) -> Result<String, MalError> {
     let ast = try!(read(str));
     let exp = try!(eval(ast, "".to_string()));
     print(exp)
@@ -32,7 +33,8 @@ pub fn run() {
         let result = rep(line.unwrap());
         match result {
             Ok(message) => println(message),
-            Err(message) => println(message),
+            Err(MalError::ErrorMessage(message)) => println(message),
+            Err(MalError::ThrowAST(ast)) => panic!("{:?}", ast),
         }
     }
 }

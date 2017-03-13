@@ -1,5 +1,6 @@
 use types::MalType;
 use types::MalType::*;
+use types::MalHashMapKey;
 
 #[cfg(target_arch="wasm32")]
 pub mod wasm_stdout {
@@ -67,10 +68,23 @@ pub fn pr_str(v: &MalType, print_readably: bool) -> String {
                 list.iter().map(|x| pr_str(x, print_readably)).collect::<Vec<_>>().join(" ");
             format!("[{}]", value)
         }
-        &MalHashMap(ref list) => {
-            let value =
-                list.iter().map(|x| pr_str(x, print_readably)).collect::<Vec<_>>().join(" ");
-            format!("{{{}}}", value)
+        &MalHashMap(ref hash_map) => {
+            let mut ret = String::new();
+            ret += "{";
+            for (key, value) in hash_map {
+                if ret != "{" {
+                    ret += " ";
+                }
+                let key = match key {
+                    &MalHashMapKey::MalString(ref v) => MalString(v.to_string()),
+                    &MalHashMapKey::MalKeyword(ref v) => MalKeyword(v.to_string()),
+                };
+                ret += &pr_str(&key, print_readably);
+                ret += " ";
+                ret += &pr_str(value, print_readably);
+            }
+            ret += "}";
+            ret
         }
         &MalNumber(ref v) => format!("{}", v),
         &MalSymbol(ref v) => format!("{}", v),

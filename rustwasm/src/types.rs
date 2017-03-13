@@ -1,20 +1,23 @@
 use std::fmt;
+use std::convert::From;
 use std::rc::Rc;
 use std::cell::RefCell;
+use std::collections::HashMap;
 
 use printer::pr_str;
 
 use env::Env;
 use self::MalType::*;
+use self::MalError::*;
 
-pub type MalResult = Result<MalType, String>;
+pub type MalResult = Result<MalType, MalError>;
 type MalF = fn(args: Vec<MalType>) -> MalResult;
 
 #[derive(PartialEq, Eq, Clone)]
 pub enum MalType {
     MalList(Vec<MalType>),
     MalVector(Vec<MalType>),
-    MalHashMap(Vec<MalType>), // Mal's HashMap is immutable. odd value is key, even value is value.
+    MalHashMap(HashMap<MalHashMapKey, MalType>), // Key is MalType::MalString or MalType::MalKeyword
     MalNumber(i64),
     MalString(String),
     MalKeyword(String),
@@ -28,6 +31,85 @@ pub enum MalType {
 impl fmt::Debug for MalType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", pr_str(self, true))
+    }
+}
+
+impl MalType {
+    pub fn hash_key(&self) -> Result<MalHashMapKey, MalError> {
+        match self {
+            &MalString(ref v) => Ok(MalHashMapKey::MalString(v.to_string())),
+            &MalKeyword(ref v) => Ok(MalHashMapKey::MalKeyword(v.to_string())),
+            _ => {
+                mal_error!(format!("unexpected symbol. expected: string or keyword, actual: {:?}",
+                                   self))
+            }
+        }
+    }
+}
+
+pub fn vec_to_hash_map(args: Vec<MalType>) -> MalResult {
+    if args.len() % 2 != 0 {
+        return mal_error!(format!("unexpected hash-map state. length: {}", args.len()));
+    }
+
+    let mut new_hash_map: HashMap<MalHashMapKey, MalType> = HashMap::new();
+
+    for i in 0..args.len() {
+        if i % 2 == 1 {
+            continue;
+        }
+        let key = args.get(i).unwrap();
+        let value = args.get(i + 1).unwrap();
+
+        let key = match key {
+            &MalString(ref v) => MalHashMapKey::MalString(v.to_string()),
+            &MalKeyword(ref v) => MalHashMapKey::MalKeyword(v.to_string()),
+            _ => {
+                return mal_error!(format!("unexpected symbol. expected: string or keyword, \
+                                           actual: {:?}",
+                                          key))
+            }
+        };
+
+        new_hash_map.insert(key, value.clone());
+    }
+
+    Ok(MalHashMap(new_hash_map))
+}
+
+// I want to use MalKeyword and MalSymbol to HashMap keys.
+// But MalHashMap can't be a Key of HashMap. (recursive)
+// I decided to extract key enum to use HashMap of key.
+#[derive(PartialEq, Eq,Hash, Clone)]
+pub enum MalHashMapKey {
+    MalKeyword(String),
+    MalString(String),
+}
+
+pub enum MalError {
+    ErrorMessage(String),
+    ThrowAST(MalType),
+}
+
+impl From<String> for MalError {
+    fn from(err: String) -> MalError {
+        ErrorMessage(err)
+    }
+}
+
+impl From<MalType> for MalError {
+    fn from(ast: MalType) -> MalError {
+        ThrowAST(ast)
+    }
+}
+
+impl fmt::Debug for MalError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let message = match self {
+            &ErrorMessage(ref message) => message.clone(),
+            &ThrowAST(ref ast) => format!("receive exception: {}", pr_str(ast, true)),
+        };
+        write!(f, "{}", message)
     }
 }
 
@@ -68,12 +150,12 @@ impl MalFuncData {
             (container.eval)(container.ast.clone(), new_env)
         } else if let Some(ref container) = self.eval {
             if args.len() != 1 {
-                return Err(format!("unexpected argument length. expected: 1, actual: {}",
-                                   args.len()));
+                return mal_error!(format!("unexpected argument length. expected: 1, actual: {}",
+                                          args.len()));
             }
             (container.eval)(args.get(0).unwrap().clone(), container.env.clone())
         } else {
-            Err("undefined function".to_string())
+            mal_error!("undefined function".to_string())
         }
     }
 
@@ -113,7 +195,7 @@ pub fn func_from_lisp(eval: fn(ast: MalType, env: Env) -> MalResult,
         if let MalSymbol(v) = bind {
             bind_strs.push(v);
         } else {
-            return Err("bind should be symbol".to_string());
+            return mal_error!("bind should be symbol".to_string());
         }
     }
 
@@ -133,7 +215,7 @@ pub fn func_from_lisp(eval: fn(ast: MalType, env: Env) -> MalResult,
 pub fn macro_from_lisp(func_data: MalFuncData) -> MalResult {
     let data = match func_data.closure {
         Some(v) => v,
-        None => return Err("unexpected function pattern".to_string()),
+        None => return mal_error!("unexpected function pattern".to_string()),
     };
 
     Ok(MalFunc(MalFuncData {

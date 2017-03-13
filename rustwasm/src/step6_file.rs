@@ -1,9 +1,10 @@
 #[cfg(not(target_arch="wasm32"))]
 use std::process;
+use std::collections::HashMap;
 
 use readline::mal_readline;
 
-use types::{MalType, MalResult};
+use types::{MalType, MalError, MalResult, MalHashMapKey};
 use types::MalType::*;
 use types::{func_from_lisp, func_for_eval};
 use core;
@@ -13,7 +14,10 @@ use printer::{pr_str, println};
 
 // READ
 fn read(str: String) -> MalResult {
-    read_str(str)
+    match read_str(str) {
+        Ok(v) => Ok(v),
+        Err(v) => mal_error!(v),
+    }
 }
 
 fn eval_ast(ast: MalType, env: Env) -> MalResult {
@@ -21,7 +25,7 @@ fn eval_ast(ast: MalType, env: Env) -> MalResult {
         MalSymbol(ref v) => {
             match env.clone().get(v.to_string()) {
                 Some(ast) => Ok(ast.clone()),
-                None => return Err(format!("{} not found", v)),
+                None => return mal_error!(format!("'{}' not found", v)),
             }
         }
         MalList(list) => {
@@ -38,21 +42,14 @@ fn eval_ast(ast: MalType, env: Env) -> MalResult {
             }
             Ok(MalVector(new_list))
         }
-        MalHashMap(list) => {
-            if list.len() % 2 != 0 {
-                return Err(format!("invalid hash-map: len = {}", list.len()));
+        MalHashMap(hash_map) => {
+            let mut new_hash_map: HashMap<MalHashMapKey, MalType> = HashMap::new();
+            for (key, value) in hash_map.iter() {
+                let value = try!(eval(value.clone(), env.clone()));
+                new_hash_map.insert(key.clone(), value);
             }
 
-            let mut new_list: Vec<MalType> = vec![];
-            for i in 0..list.len() {
-                if i % 2 == 1 {
-                    continue;
-                }
-                new_list.push(list[i].clone());
-                new_list.push(try!(eval(list[i + 1].clone(), env.clone())));
-            }
-
-            Ok(MalHashMap(new_list))
+            Ok(MalHashMap(new_hash_map))
         }
         v => Ok(v),
     }
@@ -80,8 +77,9 @@ fn eval(ast: MalType, env: Env) -> MalResult {
                     let key = match key {
                         &MalSymbol(ref v) => v,
                         _ => {
-                            return Err(format!("unexpected symbol. expected: symbol, actual: {:?}",
-                                               key))
+                            return mal_error!(format!("unexpected symbol. expected: symbol, \
+                                                       actual: {:?}",
+                                                      key))
                         }
                     };
                     let value = &list[2];
@@ -102,9 +100,9 @@ fn eval(ast: MalType, env: Env) -> MalResult {
                         let key = match key {
                             &MalSymbol(ref v) => v,
                             _ => {
-                                return Err(format!("unexpected symbol. expected: symbol, actual: \
-                                                    {:?}",
-                                                   key))
+                                return mal_error!(format!("unexpected symbol. expected: symbol, \
+                                                           actual: {:?}",
+                                                          key))
                             }
                         };
                         env.set(key.to_string(), try!(eval(value.clone(), env.clone())));
@@ -124,12 +122,12 @@ fn eval(ast: MalType, env: Env) -> MalResult {
                     let cond = list.get(1);
                     let cond = match cond {
                         Some(v) => v,
-                        None => return Err("cond expr is required".to_string()),
+                        None => return mal_error!("cond expr is required".to_string()),
                     };
                     let then_expr = list.get(2);
                     let then_expr = match then_expr {
                         Some(v) => v,
-                        None => return Err("then expr is required".to_string()),
+                        None => return mal_error!("then expr is required".to_string()),
                     };
                     let else_expr = list.get(3);
 
@@ -150,14 +148,14 @@ fn eval(ast: MalType, env: Env) -> MalResult {
                     let binds = list.get(1);
                     let binds = match binds {
                         Some(v) => v,
-                        None => return Err("binds is required".to_string()),
+                        None => return mal_error!("binds is required".to_string()),
                     };
                     let binds = seq!(binds.clone());
 
                     let exprs = list.get(2);
                     let exprs = match exprs {
                         Some(v) => v,
-                        None => return Err("exprs is required".to_string()),
+                        None => return mal_error!("exprs is required".to_string()),
                     };
 
                     return func_from_lisp(eval, env, binds, exprs.clone());
@@ -169,14 +167,16 @@ fn eval(ast: MalType, env: Env) -> MalResult {
         let ret = try!(eval_ast(MalList(list), env.clone()));
         let list = seq!(ret);
         if list.len() == 0 {
-            return Err("unexpected state: len == 0".to_string());
+            return mal_error!("unexpected state: len == 0".to_string());
         }
 
         let f = &list[0];
         let args = (&list[1..]).to_vec();
         let f = match f {
             &MalFunc(ref f) => f,
-            _ => return Err(format!("unexpected symbol. expected: function, actual: {:?}", f)),
+            _ => {
+                return mal_error!(format!("unexpected symbol. expected: function, actual: {:?}", f))
+            }
         };
         if let Some(v) = try!(f.tco_apply(args.clone())) {
             ast = v.0;
@@ -188,11 +188,11 @@ fn eval(ast: MalType, env: Env) -> MalResult {
 }
 
 // PRINT
-fn print(exp: MalType) -> Result<String, String> {
+fn print(exp: MalType) -> Result<String, MalError> {
     Ok(pr_str(&exp, true))
 }
 
-pub fn rep(str: String, env: &Env) -> Result<String, String> {
+pub fn rep(str: String, env: &Env) -> Result<String, MalError> {
     let ast = try!(read(str));
     let exp = try!(eval(ast, env.clone()));
     print(exp)
@@ -211,13 +211,13 @@ pub fn new_repl_env() -> Env {
     // core.mal: defined using the language itself
     match rep("(def! not (fn* (a) (if a false true)))".to_string(),
               &repl_env) {
-        Err(x) => panic!("{}", x),
+        Err(x) => panic!("{:?}", x),
         _ => {}
     };
     match rep(r##"(def! load-file (fn* (f) (eval (read-string (str "(do " (slurp f) ")")))))"##
                   .to_string(),
               &repl_env) {
-        Err(x) => panic!("{}", x),
+        Err(x) => panic!("{:?}", x),
         _ => {}
     };
 
@@ -230,8 +230,8 @@ fn load_file(source: String, env: &Env) {
     let ret = rep(load, env);
     match ret {
         Ok(_) => process::exit(0),
-        Err(str) => {
-            println!("{}", str);
+        Err(v) => {
+            println!("{:?}", v);
             process::exit(1);
         }
     };
@@ -263,7 +263,10 @@ pub fn run(args: Vec<String>) {
         let result = rep(line.unwrap(), &repl_env);
         match result {
             Ok(message) => println(message),
-            Err(message) => println(message),
+            Err(MalError::ErrorMessage(message)) => println(message),
+            Err(MalError::ThrowAST(ref ast)) => {
+                println(format!("receive exception: {}", pr_str(ast, true)))
+            }
         }
     }
 }

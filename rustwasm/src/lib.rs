@@ -11,9 +11,15 @@ macro_rules! seq {
             MalList(list) | MalVector(list) => list,
             _ => {
                 let msg = format!("invalid symbol. expected: list or vector, actual: {:?}", $ast);
-                return Err(msg);
+                return mal_error!(msg);
             },
         }
+    )
+}
+
+macro_rules! mal_error {
+    ($expr:expr) => (
+        Err(::std::convert::From::from($expr))
     )
 }
 
@@ -32,6 +38,7 @@ mod step5_tco;
 mod step6_file;
 mod step7_quote;
 mod step8_macros;
+mod step9_try;
 
 pub use step0_repl::run as step0_repl_run;
 pub use step1_read_print::run as step1_read_print_run;
@@ -42,10 +49,11 @@ pub use step5_tco::run as step5_tco_run;
 pub use step6_file::run as step6_file_run;
 pub use step7_quote::run as step7_quote_run;
 pub use step8_macros::run as step8_macros_run;
+pub use step9_try::run as step9_try_run;
 
 #[cfg(target_arch="wasm32")]
 pub mod wasm {
-    use step8_macros as latest_step;
+    use step9_try as latest_step;
 
     use std::ffi::{CString, CStr};
     use std::os::raw::c_char;

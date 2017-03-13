@@ -1,6 +1,6 @@
 #!/bin/sh -eux
 
-TARGET=step8
+TARGET=step9
 
 rustc -V
 emcc -v

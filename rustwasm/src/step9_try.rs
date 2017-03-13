@@ -290,6 +290,55 @@ fn eval(ast: MalType, env: Env) -> MalResult {
                     };
                     return macroexpand(v.clone(), env);
                 }
+                &MalSymbol(ref v) if v == "try*" => {
+                    let v = list.get(1);
+                    let v = match v {
+                        Some(v) => v,
+                        None => return mal_error!("try body is required".to_string()),
+                    };
+                    let ret = eval(v.clone(), env.clone());
+                    let err_msg = match ret {
+                        Ok(_) => return ret,
+                        Err(msg) => msg,
+                    };
+
+                    let catch_body = list.get(2);
+                    let catch_body = match catch_body {
+                        Some(v) => v,
+                        None => return mal_error!("catch body is required".to_string()),
+                    };
+                    let catch_body = seq!(catch_body.clone());
+
+                    match catch_body.get(0) {
+                        Some(&MalSymbol(ref v)) if v == "catch*" => {}
+                        _ => return mal_error!(err_msg),
+                    };
+
+                    let error_symbol = match catch_body.get(1) {
+                        Some(&MalSymbol(ref v)) => v,
+                        Some(v) => {
+                            return mal_error!(format!("unexpected symbol. expected: symbol, \
+                                                       actual: {:?}",
+                                                      v))
+                        }
+                        None => return mal_error!("error symbol is required".to_string()),
+                    };
+
+                    let e = match err_msg {
+                        MalError::ErrorMessage(message) => MalString(message),
+                        MalError::ThrowAST(ast) => ast,
+                    };
+
+                    let catch_expr = match catch_body.get(2) {
+                        Some(v) => v,
+                        None => return mal_error!("catch expr is required".to_string()),
+                    };
+
+                    return eval(catch_expr.clone(),
+                                try!(Env::new(Some(env.clone()),
+                                              vec![error_symbol.clone()],
+                                              vec![e])));
+                }
                 &MalSymbol(ref v) if v == "do" => {
                     let len = list.len();
                     let exprs = &list[1..(len - 1)];

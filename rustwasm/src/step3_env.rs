@@ -1,7 +1,9 @@
+use std::collections::HashMap;
+
 use readline::mal_readline;
 
 use types;
-use types::{MalType, MalResult};
+use types::{MalType, MalError, MalResult, MalHashMapKey};
 use types::MalType::*;
 use env::Env;
 use reader::read_str;
@@ -9,7 +11,10 @@ use printer::{pr_str, println};
 
 // READ
 fn read(str: String) -> MalResult {
-    read_str(str)
+    match read_str(str) {
+        Ok(v) => Ok(v),
+        Err(v) => mal_error!(v),
+    }
 }
 
 fn eval_ast(ast: MalType, env: Env) -> MalResult {
@@ -17,7 +22,7 @@ fn eval_ast(ast: MalType, env: Env) -> MalResult {
         MalSymbol(ref v) => {
             match env.clone().get(v.to_string()) {
                 Some(ast) => Ok(ast.clone()),
-                None => return Err(format!("{} not found", v)),
+                None => return mal_error!(format!("'{}' not found", v)),
             }
         }
         MalList(list) => {
@@ -34,21 +39,14 @@ fn eval_ast(ast: MalType, env: Env) -> MalResult {
             }
             Ok(MalVector(new_list))
         }
-        MalHashMap(list) => {
-            if list.len() % 2 != 0 {
-                return Err(format!("invalid hash-map: len = {}", list.len()));
+        MalHashMap(hash_map) => {
+            let mut new_hash_map: HashMap<MalHashMapKey, MalType> = HashMap::new();
+            for (key, value) in hash_map.iter() {
+                let value = try!(eval(value.clone(), env.clone()));
+                new_hash_map.insert(key.clone(), value);
             }
 
-            let mut new_list: Vec<MalType> = vec![];
-            for i in 0..list.len() {
-                if i % 2 == 1 {
-                    continue;
-                }
-                new_list.push(list[i].clone());
-                new_list.push(try!(eval(list[i + 1].clone(), env.clone())));
-            }
-
-            Ok(MalHashMap(new_list))
+            Ok(MalHashMap(new_hash_map))
         }
         v => Ok(v),
     }
@@ -72,8 +70,9 @@ fn eval(ast: MalType, env: Env) -> MalResult {
                 let key = match key {
                     &MalSymbol(ref v) => v,
                     _ => {
-                        return Err(format!("unexpected symbol. expected: symbol, actual: {:?}",
-                                           key))
+                        return mal_error!(format!("unexpected symbol. expected: symbol, actual: \
+                                                   {:?}",
+                                                  key))
                     }
                 };
                 let value = &list[2];
@@ -94,8 +93,9 @@ fn eval(ast: MalType, env: Env) -> MalResult {
                     let key = match key {
                         &MalSymbol(ref v) => v,
                         _ => {
-                            return Err(format!("unexpected symbol. expected: symbol, actual: {:?}",
-                                               key))
+                            return mal_error!(format!("unexpected symbol. expected: symbol, \
+                                                       actual: {:?}",
+                                                      key))
                         }
                     };
                     let_env.set(key.to_string(), try!(eval(value.clone(), let_env.clone())));
@@ -111,23 +111,23 @@ fn eval(ast: MalType, env: Env) -> MalResult {
     let ast = try!(eval_ast(MalList(list), env.clone()));
     let list = seq!(ast);
     if list.len() == 0 {
-        return Err("unexpected state: len == 0".to_string());
+        return mal_error!("unexpected state: len == 0".to_string());
     }
 
     let f = &list[0];
     let f = match f {
         &MalFunc(ref f) => f,
-        _ => return Err(format!("unexpected symbol. expected: function, actual: {:?}", f)),
+        _ => return mal_error!(format!("unexpected symbol. expected: function, actual: {:?}", f)),
     };
     f.apply((&list[1..]).to_vec())
 }
 
 // PRINT
-fn print(exp: MalType) -> Result<String, String> {
+fn print(exp: MalType) -> Result<String, MalError> {
     Ok(pr_str(&exp, true))
 }
 
-pub fn rep(str: String, env: &Env) -> Result<String, String> {
+pub fn rep(str: String, env: &Env) -> Result<String, MalError> {
     let ast = try!(read(str));
     let exp = try!(eval(ast, env.clone()));
     print(exp)
@@ -135,52 +135,52 @@ pub fn rep(str: String, env: &Env) -> Result<String, String> {
 
 fn add(args: Vec<MalType>) -> MalResult {
     if args.len() != 2 {
-        return Err("+: 2 arguments required".to_string());
+        return mal_error!("+: 2 arguments required".to_string());
     }
     match (&args[0], &args[1]) {
         (&MalNumber(a), &MalNumber(b)) => Ok(MalNumber(a + b)),
         _ => {
-            Err(format!("unexpected symbol. expected: number & number, actual: {:?}",
-                        args))
+            mal_error!(format!("unexpected symbol. expected: number & number, actual: {:?}",
+                               args))
         }
     }
 }
 
 fn sub(args: Vec<MalType>) -> MalResult {
     if args.len() != 2 {
-        return Err("+: 2 arguments required".to_string());
+        return mal_error!("+: 2 arguments required".to_string());
     }
     match (&args[0], &args[1]) {
         (&MalNumber(a), &MalNumber(b)) => Ok(MalNumber(a - b)),
         _ => {
-            Err(format!("unexpected symbol. expected: number & number, actual: {:?}",
-                        args))
+            mal_error!(format!("unexpected symbol. expected: number & number, actual: {:?}",
+                               args))
         }
     }
 }
 
 fn mul(args: Vec<MalType>) -> MalResult {
     if args.len() != 2 {
-        return Err("+: 2 arguments required".to_string());
+        return mal_error!("+: 2 arguments required".to_string());
     }
     match (&args[0], &args[1]) {
         (&MalNumber(a), &MalNumber(b)) => Ok(MalNumber(a * b)),
         _ => {
-            Err(format!("unexpected symbol. expected: number & number, actual: {:?}",
-                        args))
+            mal_error!(format!("unexpected symbol. expected: number & number, actual: {:?}",
+                               args))
         }
     }
 }
 
 fn div(args: Vec<MalType>) -> MalResult {
     if args.len() != 2 {
-        return Err("+: 2 arguments required".to_string());
+        return mal_error!("+: 2 arguments required".to_string());
     }
     match (&args[0], &args[1]) {
         (&MalNumber(a), &MalNumber(b)) => Ok(MalNumber(a / b)),
         _ => {
-            Err(format!("unexpected symbol. expected: number & number, actual: {:?}",
-                        args))
+            mal_error!(format!("unexpected symbol. expected: number & number, actual: {:?}",
+                               args))
         }
     }
 }
@@ -200,7 +200,10 @@ pub fn run() {
         let result = rep(line.unwrap(), &repl_env);
         match result {
             Ok(message) => println(message),
-            Err(message) => println(message),
+            Err(MalError::ErrorMessage(message)) => println(message),
+            Err(MalError::ThrowAST(ref ast)) => {
+                println(format!("receive exception: {}", pr_str(ast, true)))
+            }
         }
     }
 }

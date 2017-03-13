@@ -3,6 +3,8 @@ use regex::Regex;
 
 use types::MalType;
 use types::MalType::*;
+use types::vec_to_hash_map;
+use types::MalResult;
 
 #[derive(Debug, Clone)]
 struct Reader {
@@ -33,7 +35,7 @@ impl Reader {
     }
 }
 
-pub fn read_str(input: String) -> Result<MalType, String> {
+pub fn read_str(input: String) -> MalResult {
     let tokens = tokenizer(input);
     let mut reader = Reader::new(tokens);
     read_form(&mut reader)
@@ -114,7 +116,7 @@ fn tokenizer(str: String) -> Vec<String> {
     jstokenizer::JSTokenizer::new().call_js(str)
 }
 
-fn read_form(reader: &mut Reader) -> Result<MalType, String> {
+fn read_form(reader: &mut Reader) -> MalResult {
     let token = try!(reader.peek());
     match token.as_ref() {
         "(" => read_list(reader),
@@ -136,17 +138,17 @@ fn read_form(reader: &mut Reader) -> Result<MalType, String> {
     }
 }
 
-fn read_special_symbol(reader: &mut Reader, name: String) -> Result<MalType, String> {
+fn read_special_symbol(reader: &mut Reader, name: String) -> MalResult {
     try!(reader.next()); // drop
     let sym = MalSymbol(name);
     let target = try!(read_form(reader));
     Ok(MalList(vec![sym, target]))
 }
 
-fn read_list(reader: &mut Reader) -> Result<MalType, String> {
+fn read_list(reader: &mut Reader) -> MalResult {
     let token = try!(reader.next()); // drop open paren
     if token != "(" {
-        return Err(format!("unexpected token {}, expected (", token));
+        return mal_error!(format!("unexpected token {}, expected (", token));
     }
 
     let mut list: Vec<MalType> = vec![];
@@ -163,10 +165,10 @@ fn read_list(reader: &mut Reader) -> Result<MalType, String> {
     Ok(MalList(list))
 }
 
-fn read_vector(reader: &mut Reader) -> Result<MalType, String> {
+fn read_vector(reader: &mut Reader) -> MalResult {
     let token = try!(reader.next()); // drop open paren
     if token != "[" {
-        return Err(format!("unexpected token {}, expected [", token));
+        return mal_error!(format!("unexpected token {}, expected [", token));
     }
 
     let mut list: Vec<MalType> = vec![];
@@ -183,10 +185,10 @@ fn read_vector(reader: &mut Reader) -> Result<MalType, String> {
     Ok(MalVector(list))
 }
 
-fn read_hash_map(reader: &mut Reader) -> Result<MalType, String> {
+fn read_hash_map(reader: &mut Reader) -> MalResult {
     let token = try!(reader.next()); // drop open paren
     if token != "{" {
-        return Err(format!("unexpected token {}, expected {{", token));
+        return mal_error!(format!("unexpected token {}, expected {{", token));
     }
 
     let mut list: Vec<MalType> = vec![];
@@ -200,10 +202,10 @@ fn read_hash_map(reader: &mut Reader) -> Result<MalType, String> {
 
     try!(reader.next()); // drop close paren
 
-    Ok(MalHashMap(list))
+    vec_to_hash_map(list)
 }
 
-fn read_atom(reader: &mut Reader) -> Result<MalType, String> {
+fn read_atom(reader: &mut Reader) -> MalResult {
     let token = try!(reader.next());
     if let Ok(v) = token.parse::<i64>() {
         return Ok(MalNumber(v));
