@@ -24,28 +24,28 @@ fn eval_ast(ast: MalType, env: Env) -> MalResult {
                 None => return mal_error!(format!("'{}' not found", v)),
             }
         }
-        MalList(list) => {
+        MalList(list, _) => {
             let mut new_list = vec![];
             for ast in list {
                 new_list.push(try!(eval(ast, env.clone())));
             }
-            Ok(MalList(new_list))
+            Ok(MalList(new_list, Box::new(None)))
         }
-        MalVector(list) => {
+        MalVector(list, _) => {
             let mut new_list = vec![];
             for ast in list {
                 new_list.push(try!(eval(ast, env.clone())));
             }
-            Ok(MalVector(new_list))
+            Ok(MalVector(new_list, Box::new(None)))
         }
-        MalHashMap(hash_map) => {
+        MalHashMap(hash_map, _) => {
             let mut new_hash_map: HashMap<MalHashMapKey, MalType> = HashMap::new();
             for (key, value) in hash_map.iter() {
                 let value = try!(eval(value.clone(), env.clone()));
                 new_hash_map.insert(key.clone(), value);
             }
 
-            Ok(MalHashMap(new_hash_map))
+            Ok(MalHashMap(new_hash_map, Box::new(None)))
         }
         v => Ok(v),
     }
@@ -54,14 +54,14 @@ fn eval_ast(ast: MalType, env: Env) -> MalResult {
 // EVAL
 fn eval(ast: MalType, env: Env) -> MalResult {
     let list = match ast {
-        MalList(list) => list,
+        MalList(list, _) => list,
         _ => return eval_ast(ast, env),
     };
     if list.len() == 0 {
-        return Ok(MalList(list));
+        return Ok(MalList(list, Box::new(None)));
     }
 
-    let ast = try!(eval_ast(MalList(list), env.clone()));
+    let ast = try!(eval_ast(MalList(list, Box::new(None)), env.clone()));
     let list = seq!(ast);
     if list.len() == 0 {
         return mal_error!("unexpected state: len == 0".to_string());
@@ -69,7 +69,7 @@ fn eval(ast: MalType, env: Env) -> MalResult {
 
     let f = &list[0];
     let f = match f {
-        &MalFunc(ref f) => f,
+        &MalFunc(ref f, _) => f,
         _ => return mal_error!(format!("unexpected symbol. expected: function, actual: {:?}", f)),
     };
     f.apply((&list[1..]).to_vec())

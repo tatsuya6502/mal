@@ -296,6 +296,55 @@ fn eval(ast: MalType, env: Env) -> MalResult {
                     };
                     return macroexpand(v.clone(), env);
                 }
+                &MalSymbol(ref v) if v == "try*" => {
+                    let v = list.get(1);
+                    let v = match v {
+                        Some(v) => v,
+                        None => return mal_error!("try body is required".to_string()),
+                    };
+                    let ret = eval(v.clone(), env.clone());
+                    let err_msg = match ret {
+                        Ok(_) => return ret,
+                        Err(msg) => msg,
+                    };
+
+                    let catch_body = list.get(2);
+                    let catch_body = match catch_body {
+                        Some(v) => v,
+                        None => return mal_error!("catch body is required".to_string()),
+                    };
+                    let catch_body = seq!(catch_body.clone());
+
+                    match catch_body.get(0) {
+                        Some(&MalSymbol(ref v)) if v == "catch*" => {}
+                        _ => return mal_error!(err_msg),
+                    };
+
+                    let error_symbol = match catch_body.get(1) {
+                        Some(&MalSymbol(ref v)) => v,
+                        Some(v) => {
+                            return mal_error!(format!("unexpected symbol. expected: symbol, \
+                                                       actual: {:?}",
+                                                      v))
+                        }
+                        None => return mal_error!("error symbol is required".to_string()),
+                    };
+
+                    let e = match err_msg {
+                        MalError::ErrorMessage(message) => MalString(message),
+                        MalError::ThrowAST(ast) => ast,
+                    };
+
+                    let catch_expr = match catch_body.get(2) {
+                        Some(v) => v,
+                        None => return mal_error!("catch expr is required".to_string()),
+                    };
+
+                    return eval(catch_expr.clone(),
+                                try!(Env::new(Some(env.clone()),
+                                              vec![error_symbol.clone()],
+                                              vec![e])));
+                }
                 &MalSymbol(ref v) if v == "do" => {
                     let len = list.len();
                     let exprs = &list[1..(len - 1)];
@@ -394,6 +443,11 @@ pub fn new_repl_env() -> Env {
     repl_env.set("eval".to_string(), func_for_eval(eval, repl_env.clone()));
 
     // core.mal: defined using the language itself
+    match rep(r##"(def! *host-language* "rust+wasm")""##.to_string(),
+              &repl_env) {
+        Err(x) => panic!("{:?}", x),
+        _ => {}
+    };
     match rep("(def! not (fn* (a) (if a false true)))".to_string(),
               &repl_env) {
         Err(x) => panic!("{:?}", x),
@@ -411,7 +465,18 @@ pub fn new_repl_env() -> Env {
         Err(x) => panic!("{:?}", x),
         _ => {}
     };
-    match rep(r##"(defmacro! or (fn* (& xs) (if (empty? xs) nil (if (= 1 (count xs)) (first xs) `(let* (or_FIXME ~(first xs)) (if or_FIXME or_FIXME (or ~@(rest xs))))))))"##
+    match rep(r##"(def! *gensym-counter* (atom 0))"##.to_string(),
+              &repl_env) {
+        Err(x) => panic!("{:?}", x),
+        _ => {}
+    };
+    match rep(r##"(def! gensym (fn* [] (symbol (str "G__" (swap! *gensym-counter* (fn* [x] (+ 1 x)))))))"##                  .to_string(),
+              &repl_env) {
+        Err(x) => panic!("{:?}", x),
+        _ => {}
+    };
+
+    match rep(r##"(defmacro! or (fn* (& xs) (if (empty? xs) nil (if (= 1 (count xs)) (first xs) (let* (condvar (gensym)) `(let* (~condvar ~(first xs)) (if ~condvar ~condvar (or ~@(rest xs)))))))))"##
                   .to_string(),
               &repl_env) {
         Err(x) => panic!("{:?}", x),
@@ -451,6 +516,12 @@ pub fn run(args: Vec<String>) {
         load_file(source.to_string(), &repl_env);
         return;
     }
+
+    match rep(r##"(println (str "Mal [" *host-language* "]"))"##.to_string(),
+              &repl_env) {
+        Err(x) => panic!("{:?}", x),
+        _ => {}
+    };
 
     loop {
         let line = mal_readline("user> ");

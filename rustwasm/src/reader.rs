@@ -132,7 +132,7 @@ fn read_form(reader: &mut Reader) -> MalResult {
             let sym = MalSymbol("with-meta".to_string());
             let meta = try!(read_form(reader));
             let target = try!(read_form(reader));
-            Ok(MalList(vec![sym, target, meta]))
+            Ok(MalList(vec![sym, target, meta], Box::new(None)))
         }
         _ => read_atom(reader),
     }
@@ -142,7 +142,7 @@ fn read_special_symbol(reader: &mut Reader, name: String) -> MalResult {
     try!(reader.next()); // drop
     let sym = MalSymbol(name);
     let target = try!(read_form(reader));
-    Ok(MalList(vec![sym, target]))
+    Ok(MalList(vec![sym, target], Box::new(None)))
 }
 
 fn read_list(reader: &mut Reader) -> MalResult {
@@ -162,7 +162,7 @@ fn read_list(reader: &mut Reader) -> MalResult {
 
     try!(reader.next()); // drop close paren
 
-    Ok(MalList(list))
+    Ok(MalList(list, Box::new(None)))
 }
 
 fn read_vector(reader: &mut Reader) -> MalResult {
@@ -182,7 +182,7 @@ fn read_vector(reader: &mut Reader) -> MalResult {
 
     try!(reader.next()); // drop close paren
 
-    Ok(MalVector(list))
+    Ok(MalVector(list, Box::new(None)))
 }
 
 fn read_hash_map(reader: &mut Reader) -> MalResult {

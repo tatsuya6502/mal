@@ -33,7 +33,8 @@ impl Env {
                     None => return Err("1 argument required after '&'".to_string()),
                 };
 
-                new_env.set(next_bind.to_string(), MalList((&exprs[i..]).to_vec()));
+                new_env.set(next_bind.to_string(),
+                            MalList((&exprs[i..]).to_vec(), Box::new(None)));
                 break;
             }
             let expr = &exprs[i];

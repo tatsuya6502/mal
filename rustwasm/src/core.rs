@@ -8,6 +8,10 @@ use std::path::Path;
 use std::rc::Rc;
 use std::cell::RefCell;
 
+use time;
+
+use readline::mal_readline;
+
 use types::{func_from_bootstrap, vec_to_hash_map};
 use types::MalType;
 use types::MalType::*;
@@ -27,8 +31,8 @@ fn equal(args: Vec<MalType>) -> MalResult {
     let v1 = args.get(1).unwrap();
 
     match (v0, v1) {
-        (&MalList(ref a), &MalVector(ref b)) |
-        (&MalVector(ref a), &MalList(ref b)) => {
+        (&MalList(ref a, _), &MalVector(ref b, _)) |
+        (&MalVector(ref a, _), &MalList(ref b, _)) => {
             if a.len() != b.len() {
                 return Ok(MalBool(false));
             }
@@ -48,7 +52,7 @@ fn equal(args: Vec<MalType>) -> MalResult {
             }
             Ok(MalBool(true))
         }
-        (&MalHashMap(ref a), &MalHashMap(ref b)) => {
+        (&MalHashMap(ref a, _), &MalHashMap(ref b, _)) => {
             if a.len() != b.len() {
                 return Ok(MalBool(false));
             }
@@ -107,6 +111,15 @@ fn is_true(args: Vec<MalType>) -> MalResult {
 fn is_false(args: Vec<MalType>) -> MalResult {
     let v = match args.get(0) {
         Some(&MalBool(false)) => true,
+        _ => false,
+    };
+
+    Ok(MalBool(v))
+}
+
+fn is_string(args: Vec<MalType>) -> MalResult {
+    let v = match args.get(0) {
+        Some(&MalString(_)) => true,
         _ => false,
     };
 
@@ -196,6 +209,26 @@ fn read_string(args: Vec<MalType>) -> MalResult {
     }
 }
 
+fn readline(args: Vec<MalType>) -> MalResult {
+    if args.len() != 1 {
+        return mal_error!("readline: 1 argument required".to_string());
+    }
+    let v = args.get(0).unwrap();
+
+    let str = match v {
+        &MalString(ref str) => str,
+        _ => return mal_error!(format!("unexpected symbol. expected: string, actual: {:?}", v)),
+    };
+
+    let ret = mal_readline(str);
+
+    let ret = match ret {
+        Some(v) => MalString(v),
+        None => MalNil,
+    };
+    Ok(ret)
+}
+
 fn slurp(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
         return mal_error!("slurp: 1 argument required".to_string());
@@ -222,7 +255,7 @@ fn slurp(args: Vec<MalType>) -> MalResult {
 }
 
 fn list(args: Vec<MalType>) -> MalResult {
-    Ok(MalList(args))
+    Ok(MalList(args, Box::new(None)))
 }
 
 fn is_list(args: Vec<MalType>) -> MalResult {
@@ -232,19 +265,19 @@ fn is_list(args: Vec<MalType>) -> MalResult {
     let v = args.get(0).unwrap();
 
     let ret = match v {
-        &MalList(_) => true,
+        &MalList(_, _) => true,
         _ => false,
     };
     Ok(MalBool(ret))
 }
 
 fn vector(args: Vec<MalType>) -> MalResult {
-    Ok(MalVector(args))
+    Ok(MalVector(args, Box::new(None)))
 }
 
 fn is_vector(args: Vec<MalType>) -> MalResult {
     let v = match args.get(0) {
-        Some(&MalVector(_)) => true,
+        Some(&MalVector(_, _)) => true,
         _ => false,
     };
 
@@ -257,7 +290,7 @@ fn hash_map(args: Vec<MalType>) -> MalResult {
 
 fn is_map(args: Vec<MalType>) -> MalResult {
     let v = match args.get(0) {
-        Some(&MalHashMap(_)) => true,
+        Some(&MalHashMap(_, _)) => true,
         _ => false,
     };
 
@@ -271,7 +304,7 @@ fn assoc(args: Vec<MalType>) -> MalResult {
 
     let hash_map = args.get(0).unwrap();
     let hash_map = match hash_map {
-        &MalHashMap(ref v) => v.clone(),
+        &MalHashMap(ref v, _) => v.clone(),
         _ => {
             return mal_error!(format!("unexpected symbol. expected: hash-map, actual: {:?}",
                                       hash_map))
@@ -281,7 +314,7 @@ fn assoc(args: Vec<MalType>) -> MalResult {
     let rest = (&args[1..]).to_vec();
     let rest = try!(vec_to_hash_map(rest));
     let rest = match rest {
-        MalHashMap(ref v) => v.clone(),
+        MalHashMap(ref v, _) => v.clone(),
         _ => {
             return mal_error!(format!("unexpected symbol. expected: hash-map, actual: {:?}", rest))
         }
@@ -291,7 +324,7 @@ fn assoc(args: Vec<MalType>) -> MalResult {
     new_hash_map.extend(hash_map);
     new_hash_map.extend(rest);
 
-    Ok(MalHashMap(new_hash_map))
+    Ok(MalHashMap(new_hash_map, Box::new(None)))
 }
 
 fn dissoc(args: Vec<MalType>) -> MalResult {
@@ -301,7 +334,7 @@ fn dissoc(args: Vec<MalType>) -> MalResult {
 
     let hash_map = args.get(0).unwrap();
     let hash_map = match hash_map {
-        &MalHashMap(ref v) => v.clone(),
+        &MalHashMap(ref v, _) => v.clone(),
         _ => {
             return mal_error!(format!("unexpected symbol. expected: hash-map, actual: {:?}",
                                       hash_map))
@@ -327,7 +360,7 @@ fn dissoc(args: Vec<MalType>) -> MalResult {
         new_hash_map.remove(&key);
     }
 
-    Ok(MalHashMap(new_hash_map))
+    Ok(MalHashMap(new_hash_map, Box::new(None)))
 }
 
 fn get(args: Vec<MalType>) -> MalResult {
@@ -338,7 +371,7 @@ fn get(args: Vec<MalType>) -> MalResult {
     let v = args.get(0).unwrap();
     let hash_map = match v {
         &MalNil => return Ok(MalNil),
-        &MalHashMap(ref v) => v,
+        &MalHashMap(ref v, _) => v,
         _ => return mal_error!(format!("unexpected symbol. expected: hash-map, actual: {:?}", v)),
     };
 
@@ -366,7 +399,7 @@ fn is_contains(args: Vec<MalType>) -> MalResult {
 
     let v = args.get(0).unwrap();
     let hash_map = match v {
-        &MalHashMap(ref v) => v,
+        &MalHashMap(ref v, _) => v,
         _ => return mal_error!(format!("unexpected symbol. expected: hash-map, actual: {:?}", v)),
     };
 
@@ -389,7 +422,7 @@ fn keys(args: Vec<MalType>) -> MalResult {
     }
     let v = args.get(0).unwrap();
     let hash_map = match v {
-        &MalHashMap(ref v) => v,
+        &MalHashMap(ref v, _) => v,
         _ => return mal_error!(format!("unexpected symbol. expected: hash-map, actual: {:?}", v)),
     };
 
@@ -402,7 +435,7 @@ fn keys(args: Vec<MalType>) -> MalResult {
         ret.push(key.clone());
     }
 
-    Ok(MalList(ret))
+    Ok(MalList(ret, Box::new(None)))
 }
 
 fn vals(args: Vec<MalType>) -> MalResult {
@@ -411,7 +444,7 @@ fn vals(args: Vec<MalType>) -> MalResult {
     }
     let v = args.get(0).unwrap();
     let hash_map = match v {
-        &MalHashMap(ref v) => v,
+        &MalHashMap(ref v, _) => v,
         _ => return mal_error!(format!("unexpected symbol. expected: hash-map, actual: {:?}", v)),
     };
 
@@ -420,13 +453,13 @@ fn vals(args: Vec<MalType>) -> MalResult {
         ret.push(value.clone());
     }
 
-    Ok(MalList(ret))
+    Ok(MalList(ret, Box::new(None)))
 }
 
 fn is_sequential(args: Vec<MalType>) -> MalResult {
     let v = match args.get(0) {
-        Some(&MalList(_)) |
-        Some(&MalVector(_)) => true,
+        Some(&MalList(_, _)) |
+        Some(&MalVector(_, _)) => true,
         _ => false,
     };
 
@@ -445,7 +478,7 @@ fn cons(args: Vec<MalType>) -> MalResult {
     let mut ret = vec![v.clone()];
     ret.extend(list.iter().cloned());
 
-    Ok(MalList(ret))
+    Ok(MalList(ret, Box::new(None)))
 }
 
 fn concat(args: Vec<MalType>) -> MalResult {
@@ -456,7 +489,7 @@ fn concat(args: Vec<MalType>) -> MalResult {
         list.extend(v);
     }
 
-    Ok(MalList(list))
+    Ok(MalList(list, Box::new(None)))
 }
 
 fn nth(args: Vec<MalType>) -> MalResult {
@@ -512,16 +545,16 @@ fn rest(args: Vec<MalType>) -> MalResult {
     let list = args.get(0).unwrap();
 
     match list {
-        &MalNil => return Ok(MalList(vec![])),
+        &MalNil => return Ok(MalList(vec![], Box::new(None))),
         _ => {}
     };
 
     let list = seq!(list.clone());
     if list.len() == 0 {
-        return Ok(MalList(vec![]));
+        return Ok(MalList(vec![], Box::new(None)));
     }
 
-    Ok(MalList((&list[1..]).to_vec()))
+    Ok(MalList((&list[1..]).to_vec(), Box::new(None)))
 }
 
 fn is_empty(args: Vec<MalType>) -> MalResult {
@@ -531,8 +564,8 @@ fn is_empty(args: Vec<MalType>) -> MalResult {
     let v = args.get(0).unwrap();
 
     let list = match v {
-        &MalList(ref list) |
-        &MalVector(ref list) => list,
+        &MalList(ref list, _) |
+        &MalVector(ref list, _) => list,
         _ => return Ok(MalBool(false)),
     };
     Ok(MalBool(list.len() == 0))
@@ -545,8 +578,8 @@ fn count(args: Vec<MalType>) -> MalResult {
     let v = args.get(0).unwrap();
 
     let list = match v {
-        &MalList(ref list) |
-        &MalVector(ref list) => list,
+        &MalList(ref list, _) |
+        &MalVector(ref list, _) => list,
         _ => return Ok(MalNumber(0)),
     };
     Ok(MalNumber(list.len() as i64))
@@ -558,7 +591,7 @@ fn apply(args: Vec<MalType>) -> MalResult {
     }
     let f = args.get(0).unwrap();
     let f = match f {
-        &MalFunc(ref v) => v,
+        &MalFunc(ref v, _) => v,
         _ => return mal_error!(format!("unexpected symbol. expected: function, actual: {:?}", f)),
     };
 
@@ -578,7 +611,7 @@ fn map(args: Vec<MalType>) -> MalResult {
 
     let f = args.get(0).unwrap();
     let f = match f {
-        &MalFunc(ref v) => v,
+        &MalFunc(ref v, _) => v,
         _ => return mal_error!(format!("unexpected symbol. expected: function, actual: {:?}", f)),
     };
 
@@ -591,7 +624,7 @@ fn map(args: Vec<MalType>) -> MalResult {
         ret.push(v);
     }
 
-    Ok(MalList(ret))
+    Ok(MalList(ret, Box::new(None)))
 }
 
 fn less_than(args: Vec<MalType>) -> MalResult {
@@ -698,6 +731,151 @@ fn div(args: Vec<MalType>) -> MalResult {
     }
 }
 
+fn time_ms(_args: Vec<MalType>) -> MalResult {
+    let current_time = time::get_time();
+    let milliseconds = (current_time.sec * 1000) + (current_time.nsec as i64 / 1000 / 1000);
+
+    Ok(MalNumber(milliseconds))
+}
+
+fn conj(args: Vec<MalType>) -> MalResult {
+    if args.len() < 1 {
+        return mal_error!("conj: 1 or more argument(s) is required".to_string());
+    }
+
+    let list = args.get(0).unwrap();
+
+    let ret = match list {
+        &MalList(ref list, _) => {
+            let mut ret_list: Vec<MalType> = vec![];
+            for i in 1..args.len() {
+                let v = args.get(i).unwrap();
+                let mut temp_list: Vec<MalType> = vec![v.clone()];
+                temp_list.extend(ret_list);
+                ret_list = temp_list;
+            }
+            for i in 0..list.len() {
+                ret_list.push(list.get(i).unwrap().clone());
+            }
+
+            MalList(ret_list, Box::new(None))
+        }
+        &MalVector(ref list, _) => {
+            let mut ret_list: Vec<MalType> = vec![];
+            ret_list.extend(list.clone());
+            ret_list.extend((&args[1..]).to_vec());
+
+            MalVector(ret_list, Box::new(None))
+        }
+        _ => {
+            return mal_error!(format!("unexpected symbol. expected: list or vector, actual: {:?}",
+                                      list))
+        }
+    };
+
+    Ok(ret)
+}
+
+fn seq(args: Vec<MalType>) -> MalResult {
+    if args.len() < 1 {
+        return mal_error!("seq: 1 or more argument(s) is required".to_string());
+    }
+
+    let v = args.get(0).unwrap();
+
+    let ret = match v {
+        &MalList(ref list, _) |
+        &MalVector(ref list, _) => {
+            if list.len() == 0 {
+                MalNil
+            } else {
+                MalList(list.clone(), Box::new(None))
+            }
+        }
+        &MalString(ref str) => {
+            if str == "" {
+                MalNil
+            } else {
+                let str = str.to_string();
+                let strs = str.split("").collect::<Vec<_>>();
+                // "abc" -> ["", "a", "b", "c", ""]
+                let strs = (&strs[1..(strs.len() - 1)]).to_vec();
+                let strs = strs.into_iter().map(|v| MalString(v.to_string())).collect();
+                MalList(strs, Box::new(None))
+            }
+        }
+        &MalNil => MalNil,
+        _ => {
+            return mal_error!(format!("unexpected symbol. expected: list or vector or string or \
+                                       nil, actual: {:?}",
+                                      v))
+        }
+    };
+
+    Ok(ret)
+}
+
+fn meta(args: Vec<MalType>) -> MalResult {
+    if args.len() < 1 {
+        return mal_error!("meta: 1 or more argument(s) is required".to_string());
+    }
+
+    let v = args.get(0).unwrap();
+
+    let ret = match v {
+        &MalList(_, ref meta) => {
+            if let Some(meta) = *meta.clone() {
+                meta
+            } else {
+                MalNil
+            }
+        }
+        &MalVector(_, ref meta) => {
+            if let Some(meta) = *meta.clone() {
+                meta
+            } else {
+                MalNil
+            }
+        }
+        &MalHashMap(_, ref meta) => {
+            if let Some(meta) = *meta.clone() {
+                meta
+            } else {
+                MalNil
+            }
+        }
+        &MalFunc(_, ref meta) => {
+            if let Some(meta) = *meta.clone() {
+                meta
+            } else {
+                MalNil
+            }
+        }
+        _ => MalNil,
+    };
+
+    Ok(ret)
+}
+
+fn with_meta(args: Vec<MalType>) -> MalResult {
+    if args.len() != 2 {
+        return mal_error!("with-meta: 2 arguments are required".to_string());
+    }
+
+    let v = args.get(0).unwrap();
+    let meta = args.get(1).unwrap();
+
+    let ret = match v {
+        &MalList(ref v, _) => MalList(v.clone(), Box::new(Some(meta.clone()))),
+        &MalVector(ref v, _) => MalVector(v.clone(), Box::new(Some(meta.clone()))),
+        &MalHashMap(ref v, _) => MalHashMap(v.clone(), Box::new(Some(meta.clone()))),
+        &MalFunc(ref v, _) => MalFunc(v.clone(), Box::new(Some(meta.clone()))),
+        v => v.clone(),
+    };
+
+    Ok(ret)
+}
+
 fn atom(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
         return mal_error!("atom: 1 argument required".to_string());
@@ -762,7 +940,7 @@ fn swap(args: Vec<MalType>) -> MalResult {
 
     let f = args.get(1).unwrap();
     let f = match f {
-        &MalFunc(ref v) => v,
+        &MalFunc(ref v, _) => v,
         v => return mal_error!(format!("unexpected symbol. expected: function, actual: {:?}", v)),
     };
 
@@ -784,6 +962,7 @@ pub fn ns() -> HashMap<String, MalType> {
     ns.insert("nil?".to_string(), func_from_bootstrap(is_nil));
     ns.insert("true?".to_string(), func_from_bootstrap(is_true));
     ns.insert("false?".to_string(), func_from_bootstrap(is_false));
+    ns.insert("string?".to_string(), func_from_bootstrap(is_string));
     ns.insert("symbol".to_string(), func_from_bootstrap(symbol));
     ns.insert("symbol?".to_string(), func_from_bootstrap(is_symbol));
     ns.insert("keyword".to_string(), func_from_bootstrap(keyword));
@@ -794,6 +973,7 @@ pub fn ns() -> HashMap<String, MalType> {
     ns.insert("prn".to_string(), func_from_bootstrap(prn));
     ns.insert("println".to_string(), func_from_bootstrap(println));
     ns.insert("read-string".to_string(), func_from_bootstrap(read_string));
+    ns.insert("readline".to_string(), func_from_bootstrap(readline));
     ns.insert("slurp".to_string(), func_from_bootstrap(slurp));
     ns.insert("list".to_string(), func_from_bootstrap(list));
     ns.insert("list?".to_string(), func_from_bootstrap(is_list));
@@ -830,7 +1010,13 @@ pub fn ns() -> HashMap<String, MalType> {
     ns.insert("-".to_string(), func_from_bootstrap(sub));
     ns.insert("*".to_string(), func_from_bootstrap(mul));
     ns.insert("/".to_string(), func_from_bootstrap(div));
+    ns.insert("time-ms".to_string(), func_from_bootstrap(time_ms));
 
+    ns.insert("conj".to_string(), func_from_bootstrap(conj));
+    ns.insert("seq".to_string(), func_from_bootstrap(seq));
+
+    ns.insert("meta".to_string(), func_from_bootstrap(meta));
+    ns.insert("with-meta".to_string(), func_from_bootstrap(with_meta));
     ns.insert("atom".to_string(), func_from_bootstrap(atom));
     ns.insert("atom?".to_string(), func_from_bootstrap(is_atom));
     ns.insert("deref".to_string(), func_from_bootstrap(deref));

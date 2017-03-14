@@ -5,6 +5,7 @@ authors = ["vvakame <vvakame+dev@gmail.com>"]
 
 [dependencies]
 libc = "~0.2.20"
+time = "~0.1.36"
 
 [target.'cfg(not(target_arch="wasm32"))'.dependencies]
 regex = "~0.2.1"

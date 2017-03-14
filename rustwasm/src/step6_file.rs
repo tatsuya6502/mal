@@ -28,28 +28,28 @@ fn eval_ast(ast: MalType, env: Env) -> MalResult {
                 None => return mal_error!(format!("'{}' not found", v)),
             }
         }
-        MalList(list) => {
+        MalList(list, _) => {
             let mut new_list = vec![];
             for ast in list {
                 new_list.push(try!(eval(ast, env.clone())));
             }
-            Ok(MalList(new_list))
+            Ok(MalList(new_list, Box::new(None)))
         }
-        MalVector(list) => {
+        MalVector(list, _) => {
             let mut new_list = vec![];
             for ast in list {
                 new_list.push(try!(eval(ast, env.clone())));
             }
-            Ok(MalVector(new_list))
+            Ok(MalVector(new_list, Box::new(None)))
         }
-        MalHashMap(hash_map) => {
+        MalHashMap(hash_map, _) => {
             let mut new_hash_map: HashMap<MalHashMapKey, MalType> = HashMap::new();
             for (key, value) in hash_map.iter() {
                 let value = try!(eval(value.clone(), env.clone()));
                 new_hash_map.insert(key.clone(), value);
             }
 
-            Ok(MalHashMap(new_hash_map))
+            Ok(MalHashMap(new_hash_map, Box::new(None)))
         }
         v => Ok(v),
     }
@@ -62,11 +62,12 @@ fn eval(ast: MalType, env: Env) -> MalResult {
 
     'tco: loop {
         let list = match ast {
-            MalList(list) => list,
+            MalList(list, _) => list,
             _ => return eval_ast(ast.clone(), env),
         };
+
         if list.len() == 0 {
-            return Ok(MalList(list));
+            return Ok(MalList(list, Box::new(None)));
         }
 
         {
@@ -114,7 +115,7 @@ fn eval(ast: MalType, env: Env) -> MalResult {
                 &MalSymbol(ref v) if v == "do" => {
                     let len = list.len();
                     let exprs = &list[1..(len - 1)];
-                    try!(eval_ast(MalList(exprs.to_vec()), env.clone()));
+                    try!(eval_ast(MalList(exprs.to_vec(), Box::new(None)), env.clone()));
                     ast = list[list.len() - 1].clone();
                     continue 'tco;
                 }
@@ -164,7 +165,7 @@ fn eval(ast: MalType, env: Env) -> MalResult {
             };
         }
 
-        let ret = try!(eval_ast(MalList(list), env.clone()));
+        let ret = try!(eval_ast(MalList(list, Box::new(None)), env.clone()));
         let list = seq!(ret);
         if list.len() == 0 {
             return mal_error!("unexpected state: len == 0".to_string());
@@ -173,7 +174,7 @@ fn eval(ast: MalType, env: Env) -> MalResult {
         let f = &list[0];
         let args = (&list[1..]).to_vec();
         let f = match f {
-            &MalFunc(ref f) => f,
+            &MalFunc(ref f, _) => f,
             _ => {
                 return mal_error!(format!("unexpected symbol. expected: function, actual: {:?}", f))
             }
@@ -205,7 +206,7 @@ pub fn new_repl_env() -> Env {
     for (key, value) in core::ns().iter() {
         repl_env.set(key.to_string(), value.clone());
     }
-    repl_env.set("*ARGV*".to_string(), MalList(vec![]));
+    repl_env.set("*ARGV*".to_string(), MalList(vec![], Box::new(None)));
     repl_env.set("eval".to_string(), func_for_eval(eval, repl_env.clone()));
 
     // core.mal: defined using the language itself
@@ -249,7 +250,7 @@ pub fn run(args: Vec<String>) {
         let source = args.get(1).unwrap();
 
         let args = args.iter().skip(2).map(|str| MalString(str.clone())).collect::<Vec<_>>();
-        repl_env.set("*ARGV*".to_string(), MalList(args));
+        repl_env.set("*ARGV*".to_string(), MalList(args, Box::new(None)));
 
         load_file(source.to_string(), &repl_env);
         return;

@@ -2,13 +2,14 @@
 extern crate regex;
 
 extern crate libc;
+extern crate time;
 
 mod readline;
 
 macro_rules! seq {
     ($ast:expr) => (
         match $ast {
-            MalList(list) | MalVector(list) => list,
+            MalList(list,_) | MalVector(list,_) => list,
             _ => {
                 let msg = format!("invalid symbol. expected: list or vector, actual: {:?}", $ast);
                 return mal_error!(msg);
@@ -39,6 +40,8 @@ mod step6_file;
 mod step7_quote;
 mod step8_macros;
 mod step9_try;
+#[allow(non_snake_case)]
+mod stepA_mal;
 
 pub use step0_repl::run as step0_repl_run;
 pub use step1_read_print::run as step1_read_print_run;
@@ -50,10 +53,14 @@ pub use step6_file::run as step6_file_run;
 pub use step7_quote::run as step7_quote_run;
 pub use step8_macros::run as step8_macros_run;
 pub use step9_try::run as step9_try_run;
+pub use stepA_mal::run as stepA_mal_run;
 
 #[cfg(target_arch="wasm32")]
 pub mod wasm {
-    use step9_try as latest_step;
+    use stepA_mal as latest_step;
+
+    use types::MalError;
+    use printer::pr_str;
 
     use std::ffi::{CString, CStr};
     use std::os::raw::c_char;
@@ -87,7 +94,8 @@ pub mod wasm {
             _ => "".to_string(),
         };
         let mal_error = match ret {
-            Err(ref v) => v.to_string(),
+            Err(MalError::ErrorMessage(ref v)) => v.to_string(),
+            Err(MalError::ThrowAST(ref ast)) => format!("receive exception: {}", pr_str(ast, true)),
             _ => "".to_string(),
         };
         let stdout = "".to_string();

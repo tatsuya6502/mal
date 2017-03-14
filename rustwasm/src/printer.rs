@@ -58,17 +58,17 @@ pub fn println(str: String) {
 
 pub fn pr_str(v: &MalType, print_readably: bool) -> String {
     match v {
-        &MalList(ref list) => {
+        &MalList(ref list, _) => {
             let value =
                 list.iter().map(|x| pr_str(x, print_readably)).collect::<Vec<_>>().join(" ");
             format!("({})", value)
         }
-        &MalVector(ref list) => {
+        &MalVector(ref list, _) => {
             let value =
                 list.iter().map(|x| pr_str(x, print_readably)).collect::<Vec<_>>().join(" ");
             format!("[{}]", value)
         }
-        &MalHashMap(ref hash_map) => {
+        &MalHashMap(ref hash_map, _) => {
             let mut ret = String::new();
             ret += "{";
             for (key, value) in hash_map {
@@ -101,7 +101,7 @@ pub fn pr_str(v: &MalType, print_readably: bool) -> String {
         }
         &MalNil => "nil".to_string(),
         &MalKeyword(ref v) => format!(":{}", v),
-        &MalFunc(_) => "#<function>".to_string(),
+        &MalFunc(_, _) => "#<function>".to_string(),
         &MalAtom(ref v) => format!("(atom {})", pr_str(&v.borrow(), print_readably)),
     }
 }

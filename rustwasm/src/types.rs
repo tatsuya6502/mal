@@ -12,19 +12,20 @@ use self::MalError::*;
 
 pub type MalResult = Result<MalType, MalError>;
 type MalF = fn(args: Vec<MalType>) -> MalResult;
+type MalMeta = Box<Option<MalType>>;
 
 #[derive(PartialEq, Eq, Clone)]
 pub enum MalType {
-    MalList(Vec<MalType>),
-    MalVector(Vec<MalType>),
-    MalHashMap(HashMap<MalHashMapKey, MalType>), // Key is MalType::MalString or MalType::MalKeyword
+    MalList(Vec<MalType>, MalMeta),
+    MalVector(Vec<MalType>, MalMeta),
+    MalHashMap(HashMap<MalHashMapKey, MalType>, MalMeta), // Key is MalType::MalString or MalType::MalKeyword
     MalNumber(i64),
     MalString(String),
     MalKeyword(String),
     MalSymbol(String),
     MalNil,
     MalBool(bool),
-    MalFunc(MalFuncData),
+    MalFunc(MalFuncData, MalMeta),
     MalAtom(Rc<RefCell<MalType>>),
 }
 
@@ -74,7 +75,7 @@ pub fn vec_to_hash_map(args: Vec<MalType>) -> MalResult {
         new_hash_map.insert(key, value.clone());
     }
 
-    Ok(MalHashMap(new_hash_map))
+    Ok(MalHashMap(new_hash_map, Box::new(None)))
 }
 
 // I want to use MalKeyword and MalSymbol to HashMap keys.
@@ -179,10 +180,11 @@ impl MalFuncData {
 
 pub fn func_from_bootstrap(f: MalF) -> MalType {
     MalFunc(MalFuncData {
-        func: Some(f),
-        closure: None,
-        eval: None,
-    })
+                func: Some(f),
+                closure: None,
+                eval: None,
+            },
+            Box::new(None))
 }
 
 pub fn func_from_lisp(eval: fn(ast: MalType, env: Env) -> MalResult,
@@ -200,16 +202,17 @@ pub fn func_from_lisp(eval: fn(ast: MalType, env: Env) -> MalResult,
     }
 
     Ok(MalFunc(MalFuncData {
-        func: None,
-        closure: Some(Box::new(MalFuncDataFromLisp {
-            eval: eval,
-            env: env,
-            ast: exprs,
-            params: bind_strs,
-            is_macro: false,
-        })),
-        eval: None,
-    }))
+                   func: None,
+                   closure: Some(Box::new(MalFuncDataFromLisp {
+                       eval: eval,
+                       env: env,
+                       ast: exprs,
+                       params: bind_strs,
+                       is_macro: false,
+                   })),
+                   eval: None,
+               },
+               Box::new(None)))
 }
 
 pub fn macro_from_lisp(func_data: MalFuncData) -> MalResult {
@@ -219,25 +222,27 @@ pub fn macro_from_lisp(func_data: MalFuncData) -> MalResult {
     };
 
     Ok(MalFunc(MalFuncData {
-        func: None,
-        closure: Some(Box::new(MalFuncDataFromLisp {
-            eval: data.clone().eval,
-            env: data.clone().env,
-            ast: data.clone().ast,
-            params: data.clone().params,
-            is_macro: true,
-        })),
-        eval: None,
-    }))
+                   func: None,
+                   closure: Some(Box::new(MalFuncDataFromLisp {
+                       eval: data.clone().eval,
+                       env: data.clone().env,
+                       ast: data.clone().ast,
+                       params: data.clone().params,
+                       is_macro: true,
+                   })),
+                   eval: None,
+               },
+               Box::new(None)))
 }
 
 pub fn func_for_eval(eval: fn(ast: MalType, env: Env) -> MalResult, env: Env) -> MalType {
     MalFunc(MalFuncData {
-        func: None,
-        closure: None,
-        eval: Some(Box::new(MalFuncDataForEval {
-            eval: eval,
-            env: env,
-        })),
-    })
+                func: None,
+                closure: None,
+                eval: Some(Box::new(MalFuncDataForEval {
+                    eval: eval,
+                    env: env,
+                })),
+            },
+            Box::new(None))
 }
