@@ -254,6 +254,117 @@ fn slurp(args: Vec<MalType>) -> MalResult {
     Ok(MalString(s))
 }
 
+fn less_than(args: Vec<MalType>) -> MalResult {
+    if args.len() != 2 {
+        return mal_error!("<: 2 arguments required".to_string());
+    }
+    match (&args[0], &args[1]) {
+        (&MalNumber(a), &MalNumber(b)) => Ok(MalBool(a < b)),
+        _ => {
+            mal_error!(format!("unexpected symbol. expected: number & number, actual: {:?}",
+                               args))
+        }
+    }
+}
+
+fn less_than_or_equal(args: Vec<MalType>) -> MalResult {
+    if args.len() != 2 {
+        return mal_error!("<=: 2 arguments required".to_string());
+    }
+    match (&args[0], &args[1]) {
+        (&MalNumber(a), &MalNumber(b)) => Ok(MalBool(a <= b)),
+        _ => {
+            mal_error!(format!("unexpected symbol. expected: number & number, actual: {:?}",
+                               args))
+        }
+    }
+}
+
+fn greater_than(args: Vec<MalType>) -> MalResult {
+    if args.len() != 2 {
+        return mal_error!(">: 2 arguments required".to_string());
+    }
+    match (&args[0], &args[1]) {
+        (&MalNumber(a), &MalNumber(b)) => Ok(MalBool(a > b)),
+        _ => {
+            mal_error!(format!("unexpected symbol. expected: number & number, actual: {:?}",
+                               args))
+        }
+    }
+}
+
+fn greater_than_equal(args: Vec<MalType>) -> MalResult {
+    if args.len() != 2 {
+        return mal_error!(">=: 2 arguments required".to_string());
+    }
+    match (&args[0], &args[1]) {
+        (&MalNumber(a), &MalNumber(b)) => Ok(MalBool(a >= b)),
+        _ => {
+            mal_error!(format!("unexpected symbol. expected: number & number, actual: {:?}",
+                               args))
+        }
+    }
+}
+
+fn add(args: Vec<MalType>) -> MalResult {
+    if args.len() != 2 {
+        return mal_error!("+: 2 arguments required".to_string());
+    }
+    match (&args[0], &args[1]) {
+        (&MalNumber(a), &MalNumber(b)) => Ok(MalNumber(a + b)),
+        _ => {
+            mal_error!(format!("unexpected symbol. expected: number & number, actual: {:?}",
+                               args))
+        }
+    }
+}
+
+fn sub(args: Vec<MalType>) -> MalResult {
+    if args.len() != 2 {
+        return mal_error!("+: 2 arguments required".to_string());
+    }
+    match (&args[0], &args[1]) {
+        (&MalNumber(a), &MalNumber(b)) => Ok(MalNumber(a - b)),
+        _ => {
+            mal_error!(format!("unexpected symbol. expected: number & number, actual: {:?}",
+                               args))
+        }
+    }
+}
+
+fn mul(args: Vec<MalType>) -> MalResult {
+    if args.len() != 2 {
+        return mal_error!("+: 2 arguments required".to_string());
+    }
+    match (&args[0], &args[1]) {
+        (&MalNumber(a), &MalNumber(b)) => Ok(MalNumber(a * b)),
+        _ => {
+            mal_error!(format!("unexpected symbol. expected: number & number, actual: {:?}",
+                               args))
+        }
+    }
+}
+
+fn div(args: Vec<MalType>) -> MalResult {
+    if args.len() != 2 {
+        return mal_error!("+: 2 arguments required".to_string());
+    }
+    match (&args[0], &args[1]) {
+        (&MalNumber(a), &MalNumber(b)) => Ok(MalNumber(a / b)),
+        _ => {
+            mal_error!(format!("unexpected symbol. expected: number & number, actual: {:?}",
+                               args))
+        }
+    }
+}
+
+fn time_ms(_args: Vec<MalType>) -> MalResult {
+    let current_time = time::get_time();
+    let milliseconds = (current_time.sec * 1000) + (current_time.nsec as i64 / 1000 / 1000);
+
+    Ok(MalNumber(milliseconds))
+}
+
 fn list(args: Vec<MalType>) -> MalResult {
     Ok(MalList(args, Box::new(None)))
 }
@@ -627,117 +738,6 @@ fn map(args: Vec<MalType>) -> MalResult {
     Ok(MalList(ret, Box::new(None)))
 }
 
-fn less_than(args: Vec<MalType>) -> MalResult {
-    if args.len() != 2 {
-        return mal_error!("<: 2 arguments required".to_string());
-    }
-    match (&args[0], &args[1]) {
-        (&MalNumber(a), &MalNumber(b)) => Ok(MalBool(a < b)),
-        _ => {
-            mal_error!(format!("unexpected symbol. expected: number & number, actual: {:?}",
-                               args))
-        }
-    }
-}
-
-fn less_than_or_equal(args: Vec<MalType>) -> MalResult {
-    if args.len() != 2 {
-        return mal_error!("<=: 2 arguments required".to_string());
-    }
-    match (&args[0], &args[1]) {
-        (&MalNumber(a), &MalNumber(b)) => Ok(MalBool(a <= b)),
-        _ => {
-            mal_error!(format!("unexpected symbol. expected: number & number, actual: {:?}",
-                               args))
-        }
-    }
-}
-
-fn greater_than(args: Vec<MalType>) -> MalResult {
-    if args.len() != 2 {
-        return mal_error!(">: 2 arguments required".to_string());
-    }
-    match (&args[0], &args[1]) {
-        (&MalNumber(a), &MalNumber(b)) => Ok(MalBool(a > b)),
-        _ => {
-            mal_error!(format!("unexpected symbol. expected: number & number, actual: {:?}",
-                               args))
-        }
-    }
-}
-
-fn greater_than_equal(args: Vec<MalType>) -> MalResult {
-    if args.len() != 2 {
-        return mal_error!(">=: 2 arguments required".to_string());
-    }
-    match (&args[0], &args[1]) {
-        (&MalNumber(a), &MalNumber(b)) => Ok(MalBool(a >= b)),
-        _ => {
-            mal_error!(format!("unexpected symbol. expected: number & number, actual: {:?}",
-                               args))
-        }
-    }
-}
-
-fn add(args: Vec<MalType>) -> MalResult {
-    if args.len() != 2 {
-        return mal_error!("+: 2 arguments required".to_string());
-    }
-    match (&args[0], &args[1]) {
-        (&MalNumber(a), &MalNumber(b)) => Ok(MalNumber(a + b)),
-        _ => {
-            mal_error!(format!("unexpected symbol. expected: number & number, actual: {:?}",
-                               args))
-        }
-    }
-}
-
-fn sub(args: Vec<MalType>) -> MalResult {
-    if args.len() != 2 {
-        return mal_error!("+: 2 arguments required".to_string());
-    }
-    match (&args[0], &args[1]) {
-        (&MalNumber(a), &MalNumber(b)) => Ok(MalNumber(a - b)),
-        _ => {
-            mal_error!(format!("unexpected symbol. expected: number & number, actual: {:?}",
-                               args))
-        }
-    }
-}
-
-fn mul(args: Vec<MalType>) -> MalResult {
-    if args.len() != 2 {
-        return mal_error!("+: 2 arguments required".to_string());
-    }
-    match (&args[0], &args[1]) {
-        (&MalNumber(a), &MalNumber(b)) => Ok(MalNumber(a * b)),
-        _ => {
-            mal_error!(format!("unexpected symbol. expected: number & number, actual: {:?}",
-                               args))
-        }
-    }
-}
-
-fn div(args: Vec<MalType>) -> MalResult {
-    if args.len() != 2 {
-        return mal_error!("+: 2 arguments required".to_string());
-    }
-    match (&args[0], &args[1]) {
-        (&MalNumber(a), &MalNumber(b)) => Ok(MalNumber(a / b)),
-        _ => {
-            mal_error!(format!("unexpected symbol. expected: number & number, actual: {:?}",
-                               args))
-        }
-    }
-}
-
-fn time_ms(_args: Vec<MalType>) -> MalResult {
-    let current_time = time::get_time();
-    let milliseconds = (current_time.sec * 1000) + (current_time.nsec as i64 / 1000 / 1000);
-
-    Ok(MalNumber(milliseconds))
-}
-
 fn conj(args: Vec<MalType>) -> MalResult {
     if args.len() < 1 {
         return mal_error!("conj: 1 or more argument(s) is required".to_string());
@@ -975,9 +975,19 @@ pub fn ns() -> HashMap<String, MalType> {
     ns.insert("read-string".to_string(), func_from_bootstrap(read_string));
     ns.insert("readline".to_string(), func_from_bootstrap(readline));
     ns.insert("slurp".to_string(), func_from_bootstrap(slurp));
+
+    ns.insert("<".to_string(), func_from_bootstrap(less_than));
+    ns.insert("<=".to_string(), func_from_bootstrap(less_than_or_equal));
+    ns.insert(">".to_string(), func_from_bootstrap(greater_than));
+    ns.insert(">=".to_string(), func_from_bootstrap(greater_than_equal));
+    ns.insert("+".to_string(), func_from_bootstrap(add));
+    ns.insert("-".to_string(), func_from_bootstrap(sub));
+    ns.insert("*".to_string(), func_from_bootstrap(mul));
+    ns.insert("/".to_string(), func_from_bootstrap(div));
+    ns.insert("time-ms".to_string(), func_from_bootstrap(time_ms));
+
     ns.insert("list".to_string(), func_from_bootstrap(list));
     ns.insert("list?".to_string(), func_from_bootstrap(is_list));
-
     ns.insert("vector".to_string(), func_from_bootstrap(vector));
     ns.insert("vector?".to_string(), func_from_bootstrap(is_vector));
     ns.insert("hash-map".to_string(), func_from_bootstrap(hash_map));
@@ -1000,17 +1010,6 @@ pub fn ns() -> HashMap<String, MalType> {
     ns.insert("count".to_string(), func_from_bootstrap(count));
     ns.insert("apply".to_string(), func_from_bootstrap(apply));
     ns.insert("map".to_string(), func_from_bootstrap(map));
-
-    ns.insert("<".to_string(), func_from_bootstrap(less_than));
-    ns.insert("<=".to_string(), func_from_bootstrap(less_than_or_equal));
-    ns.insert(">".to_string(), func_from_bootstrap(greater_than));
-    ns.insert(">=".to_string(), func_from_bootstrap(greater_than_equal));
-
-    ns.insert("+".to_string(), func_from_bootstrap(add));
-    ns.insert("-".to_string(), func_from_bootstrap(sub));
-    ns.insert("*".to_string(), func_from_bootstrap(mul));
-    ns.insert("/".to_string(), func_from_bootstrap(div));
-    ns.insert("time-ms".to_string(), func_from_bootstrap(time_ms));
 
     ns.insert("conj".to_string(), func_from_bootstrap(conj));
     ns.insert("seq".to_string(), func_from_bootstrap(seq));
