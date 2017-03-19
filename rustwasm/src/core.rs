@@ -24,7 +24,7 @@ use printer::{pr_str as printer_pr_str, println as printer_println};
 
 fn equal(args: Vec<MalType>) -> MalResult {
     if args.len() != 2 {
-        return mal_error!("=: 2 arguments required".to_string());
+        return mal_error!("=: 2 arguments are required".to_string());
     }
 
     let v0 = &args[0];
@@ -83,7 +83,7 @@ fn equal(args: Vec<MalType>) -> MalResult {
 
 fn throw(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
-        return mal_error!("throw: 1 argument required".to_string());
+        return mal_error!("throw: 1 argument is required".to_string());
     }
     let v = &args[0];
 
@@ -128,7 +128,7 @@ fn is_string(args: Vec<MalType>) -> MalResult {
 
 fn symbol(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
-        return mal_error!("symbol: 1 argument required".to_string());
+        return mal_error!("symbol: 1 argument is required".to_string());
     }
     let v = &args[0];
     let v = match *v {
@@ -150,7 +150,7 @@ fn is_symbol(args: Vec<MalType>) -> MalResult {
 
 fn keyword(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
-        return mal_error!("keyword: 1 argument required".to_string());
+        return mal_error!("keyword: 1 argument is required".to_string());
     }
     let v = &args[0];
     let v = match *v {
@@ -194,7 +194,7 @@ fn println(args: Vec<MalType>) -> MalResult {
 
 fn read_string(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
-        return mal_error!("read-string: 1 argument required".to_string());
+        return mal_error!("read-string: 1 argument is required".to_string());
     }
     let v = &args[0];
 
@@ -211,7 +211,7 @@ fn read_string(args: Vec<MalType>) -> MalResult {
 
 fn readline(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
-        return mal_error!("readline: 1 argument required".to_string());
+        return mal_error!("readline: 1 argument is required".to_string());
     }
     let v = &args[0];
 
@@ -231,7 +231,7 @@ fn readline(args: Vec<MalType>) -> MalResult {
 
 fn slurp(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
-        return mal_error!("slurp: 1 argument required".to_string());
+        return mal_error!("slurp: 1 argument is required".to_string());
     }
     let v = &args[0];
 
@@ -255,7 +255,7 @@ fn slurp(args: Vec<MalType>) -> MalResult {
 
 fn less_than(args: Vec<MalType>) -> MalResult {
     if args.len() != 2 {
-        return mal_error!("<: 2 arguments required".to_string());
+        return mal_error!("<: 2 arguments are required".to_string());
     }
     match (&args[0], &args[1]) {
         (&MalNumber(a), &MalNumber(b)) => Ok(MalBool(a < b)),
@@ -268,7 +268,7 @@ fn less_than(args: Vec<MalType>) -> MalResult {
 
 fn less_than_or_equal(args: Vec<MalType>) -> MalResult {
     if args.len() != 2 {
-        return mal_error!("<=: 2 arguments required".to_string());
+        return mal_error!("<=: 2 arguments are required".to_string());
     }
     match (&args[0], &args[1]) {
         (&MalNumber(a), &MalNumber(b)) => Ok(MalBool(a <= b)),
@@ -281,7 +281,7 @@ fn less_than_or_equal(args: Vec<MalType>) -> MalResult {
 
 fn greater_than(args: Vec<MalType>) -> MalResult {
     if args.len() != 2 {
-        return mal_error!(">: 2 arguments required".to_string());
+        return mal_error!(">: 2 arguments are required".to_string());
     }
     match (&args[0], &args[1]) {
         (&MalNumber(a), &MalNumber(b)) => Ok(MalBool(a > b)),
@@ -294,7 +294,7 @@ fn greater_than(args: Vec<MalType>) -> MalResult {
 
 fn greater_than_equal(args: Vec<MalType>) -> MalResult {
     if args.len() != 2 {
-        return mal_error!(">=: 2 arguments required".to_string());
+        return mal_error!(">=: 2 arguments are required".to_string());
     }
     match (&args[0], &args[1]) {
         (&MalNumber(a), &MalNumber(b)) => Ok(MalBool(a >= b)),
@@ -307,7 +307,7 @@ fn greater_than_equal(args: Vec<MalType>) -> MalResult {
 
 fn add(args: Vec<MalType>) -> MalResult {
     if args.len() != 2 {
-        return mal_error!("+: 2 arguments required".to_string());
+        return mal_error!("+: 2 arguments are required".to_string());
     }
     match (&args[0], &args[1]) {
         (&MalNumber(a), &MalNumber(b)) => Ok(MalNumber(a + b)),
@@ -320,7 +320,7 @@ fn add(args: Vec<MalType>) -> MalResult {
 
 fn sub(args: Vec<MalType>) -> MalResult {
     if args.len() != 2 {
-        return mal_error!("+: 2 arguments required".to_string());
+        return mal_error!("+: 2 arguments are required".to_string());
     }
     match (&args[0], &args[1]) {
         (&MalNumber(a), &MalNumber(b)) => Ok(MalNumber(a - b)),
@@ -333,7 +333,7 @@ fn sub(args: Vec<MalType>) -> MalResult {
 
 fn mul(args: Vec<MalType>) -> MalResult {
     if args.len() != 2 {
-        return mal_error!("+: 2 arguments required".to_string());
+        return mal_error!("+: 2 arguments are required".to_string());
     }
     match (&args[0], &args[1]) {
         (&MalNumber(a), &MalNumber(b)) => Ok(MalNumber(a * b)),
@@ -346,7 +346,7 @@ fn mul(args: Vec<MalType>) -> MalResult {
 
 fn div(args: Vec<MalType>) -> MalResult {
     if args.len() != 2 {
-        return mal_error!("+: 2 arguments required".to_string());
+        return mal_error!("+: 2 arguments are required".to_string());
     }
     match (&args[0], &args[1]) {
         (&MalNumber(a), &MalNumber(b)) => Ok(MalNumber(a / b)),
@@ -370,7 +370,7 @@ fn list(args: Vec<MalType>) -> MalResult {
 
 fn is_list(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
-        return mal_error!("list?: 1 argument required".to_string());
+        return mal_error!("list?: 1 argument is required".to_string());
     }
     let v = &args[0];
 
@@ -408,7 +408,7 @@ fn is_map(args: Vec<MalType>) -> MalResult {
 }
 
 fn assoc(args: Vec<MalType>) -> MalResult {
-    if args.is_empty() {
+    if args.len() < 1 {
         return mal_error!("assoc: 1 or more argument(s) is required".to_string());
     }
 
@@ -438,7 +438,7 @@ fn assoc(args: Vec<MalType>) -> MalResult {
 }
 
 fn dissoc(args: Vec<MalType>) -> MalResult {
-    if args.is_empty() {
+    if args.len() < 1 {
         return mal_error!("dissoc: 1 or more argument(s) is required".to_string());
     }
 
@@ -474,7 +474,7 @@ fn dissoc(args: Vec<MalType>) -> MalResult {
 
 fn get(args: Vec<MalType>) -> MalResult {
     if args.len() != 2 {
-        return mal_error!("get: 2 arguments required".to_string());
+        return mal_error!("get: 2 arguments are required".to_string());
     }
 
     let v = &args[0];
@@ -503,7 +503,7 @@ fn get(args: Vec<MalType>) -> MalResult {
 
 fn is_contains(args: Vec<MalType>) -> MalResult {
     if args.len() != 2 {
-        return mal_error!("contains?: 2 arguments required".to_string());
+        return mal_error!("contains?: 2 arguments are required".to_string());
     }
 
     let v = &args[0];
@@ -527,7 +527,7 @@ fn is_contains(args: Vec<MalType>) -> MalResult {
 
 fn keys(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
-        return mal_error!("keys: 1 argument required".to_string());
+        return mal_error!("keys: 1 argument is required".to_string());
     }
     let v = &args[0];
     let hash_map = match *v {
@@ -549,7 +549,7 @@ fn keys(args: Vec<MalType>) -> MalResult {
 
 fn vals(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
-        return mal_error!("vals: 1 argument required".to_string());
+        return mal_error!("vals: 1 argument is required".to_string());
     }
     let v = &args[0];
     let hash_map = match *v {
@@ -577,7 +577,7 @@ fn is_sequential(args: Vec<MalType>) -> MalResult {
 
 fn cons(args: Vec<MalType>) -> MalResult {
     if args.len() != 2 {
-        return mal_error!("reset!: 2 arguments required".to_string());
+        return mal_error!("reset!: 2 arguments are required".to_string());
     }
     let v = &args[0];
     let list = &args[1];
@@ -666,7 +666,7 @@ fn rest(args: Vec<MalType>) -> MalResult {
 
 fn is_empty(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
-        return mal_error!("empty?: 1 argument required".to_string());
+        return mal_error!("empty?: 1 argument is required".to_string());
     }
     let v = &args[0];
 
@@ -680,7 +680,7 @@ fn is_empty(args: Vec<MalType>) -> MalResult {
 
 fn count(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
-        return mal_error!("count: 1 argument required".to_string());
+        return mal_error!("count: 1 argument is required".to_string());
     }
     let v = &args[0];
 
@@ -693,7 +693,7 @@ fn count(args: Vec<MalType>) -> MalResult {
 }
 
 fn apply(args: Vec<MalType>) -> MalResult {
-    if args.is_empty() {
+    if args.len() < 1 {
         return mal_error!("apply: 1 or more argument(s) is required".to_string());
     }
     let f = &args[0];
@@ -713,7 +713,7 @@ fn apply(args: Vec<MalType>) -> MalResult {
 
 fn map(args: Vec<MalType>) -> MalResult {
     if args.len() < 2 {
-        return mal_error!("map: 2 or more arguments required".to_string());
+        return mal_error!("map: 2 or more arguments are required".to_string());
     }
 
     let f = &args[0];
@@ -855,7 +855,7 @@ fn with_meta(args: Vec<MalType>) -> MalResult {
 
 fn atom(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
-        return mal_error!("atom: 1 argument required".to_string());
+        return mal_error!("atom: 1 argument is required".to_string());
     }
     let v = &args[0];
     Ok(MalAtom(Rc::new(RefCell::new(v.clone()))))
@@ -863,7 +863,7 @@ fn atom(args: Vec<MalType>) -> MalResult {
 
 fn is_atom(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
-        return mal_error!("atom?: 1 argument required".to_string());
+        return mal_error!("atom?: 1 argument is required".to_string());
     }
     let v = &args[0];
 
@@ -876,7 +876,7 @@ fn is_atom(args: Vec<MalType>) -> MalResult {
 
 fn deref(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
-        return mal_error!("deref: 1 argument required".to_string());
+        return mal_error!("deref: 1 argument is required".to_string());
     }
     let v = &args[0];
 
@@ -889,7 +889,7 @@ fn deref(args: Vec<MalType>) -> MalResult {
 
 fn reset(args: Vec<MalType>) -> MalResult {
     if args.len() != 2 {
-        return mal_error!("reset!: 2 arguments required".to_string());
+        return mal_error!("reset!: 2 arguments are required".to_string());
     }
     let atom = &args[0];
     let v = &args[1];
@@ -906,7 +906,7 @@ fn reset(args: Vec<MalType>) -> MalResult {
 
 fn swap(args: Vec<MalType>) -> MalResult {
     if args.len() < 2 {
-        return mal_error!("swap!: 2 or more arguments required".to_string());
+        return mal_error!("swap!: 2 or more arguments are required".to_string());
     }
 
     let atom = &args[0];

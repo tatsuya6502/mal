@@ -146,14 +146,16 @@ fn eval_ast(ast: MalType, env: &Env) -> MalResult {
         MalList(list, _) => {
             let mut new_list = Vec::new();
             for ast in list {
-                new_list.push(eval(ast, env.clone())?);
+                let v = eval(ast, env.clone())?;
+                new_list.push(v);
             }
             Ok(MalList(new_list, Box::new(None)))
         }
         MalVector(list, _) => {
             let mut new_list = Vec::new();
             for ast in list {
-                new_list.push(eval(ast, env.clone())?);
+                let v = eval(ast, env.clone())?;
+                new_list.push(v);
             }
             Ok(MalVector(new_list, Box::new(None)))
         }
@@ -195,6 +197,9 @@ fn eval(ast: MalType, env: Env) -> MalResult {
             let a0 = &list[0];
             match *a0 {
                 MalSymbol(ref v) if v == "def!" => {
+                    if list.len() != 3 {
+                        return mal_error!("def!: 2 arguments are required".to_string());
+                    }
                     let key = &list[1];
                     let key = match *key {
                         MalSymbol(ref v) => v,
@@ -209,6 +214,9 @@ fn eval(ast: MalType, env: Env) -> MalResult {
                     return Ok(env.set(key.to_string(), ret));
                 }
                 MalSymbol(ref v) if v == "let*" => {
+                    if list.len() != 3 {
+                        return mal_error!("let*: 2 arguments are required".to_string());
+                    }
                     env = Env::new(Some(env.clone()), Vec::new(), Vec::new())?;
                     let pairs = &list[1];
                     let expr = &list[2];
@@ -231,28 +239,25 @@ fn eval(ast: MalType, env: Env) -> MalResult {
                     continue 'tco;
                 }
                 MalSymbol(ref v) if v == "quote" => {
-                    let arg = list.get(1);
-                    let arg = match arg {
-                        Some(v) => v,
-                        None => return mal_error!("quote argument is required".to_string()),
-                    };
+                    if list.len() != 2 {
+                        return mal_error!("quote: 1 argument is required".to_string());
+                    }
+                    let arg = &list[1];
                     return Ok(arg.clone());
                 }
                 MalSymbol(ref v) if v == "quasiquote" => {
-                    let arg = list.get(1);
-                    let arg = match arg {
-                        Some(v) => v,
-                        None => return mal_error!("quasiquote argument is required".to_string()),
-                    };
+                    if list.len() != 2 {
+                        return mal_error!("quasiquote: 1 argument is required".to_string());
+                    }
+                    let arg = &list[1];
                     ast = quasiquote(arg.clone())?;
                     continue 'tco;
                 }
                 MalSymbol(ref v) if v == "defmacro!" => {
-                    let key = list.get(1);
-                    let key = match key {
-                        Some(v) => v,
-                        None => return mal_error!("key is required".to_string()),
-                    };
+                    if list.len() != 3 {
+                        return mal_error!("defmacro!: 2 arguments are required".to_string());
+                    }
+                    let key = &list[1];
                     let symbol = match *key {
                         MalSymbol(ref str) => str,
                         _ => {
@@ -261,12 +266,8 @@ fn eval(ast: MalType, env: Env) -> MalResult {
                                                       key))
                         }
                     };
-                    let value = list.get(2);
-                    let value = match value {
-                        Some(v) => v,
-                        None => return mal_error!("value expr is required".to_string()),
-                    };
 
+                    let value = &list[2];
                     let f = eval(value.clone(), env.clone())?;
                     let f = match f {
                         MalFunc(ref v, _) => v,
@@ -280,30 +281,24 @@ fn eval(ast: MalType, env: Env) -> MalResult {
                     return Ok(env.set(symbol.to_string(), f));
                 }
                 MalSymbol(ref v) if v == "macroexpand" => {
-                    let v = list.get(1);
-                    let v = match v {
-                        Some(v) => v,
-                        None => return mal_error!("value is required".to_string()),
-                    };
+                    if list.len() != 2 {
+                        return mal_error!("macroexpand: 1 argument is required".to_string());
+                    }
+                    let v = &list[1];
                     return macroexpand(v.clone(), &env);
                 }
                 MalSymbol(ref v) if v == "try*" => {
-                    let v = list.get(1);
-                    let v = match v {
-                        Some(v) => v,
-                        None => return mal_error!("try body is required".to_string()),
-                    };
+                    if list.len() != 3 {
+                        return mal_error!("try*: 2 arguments are required".to_string());
+                    }
+                    let v = &list[1];
                     let ret = eval(v.clone(), env.clone());
                     let err_msg = match ret {
                         Ok(_) => return ret,
                         Err(msg) => msg,
                     };
 
-                    let catch_body = list.get(2);
-                    let catch_body = match catch_body {
-                        Some(v) => v,
-                        None => return mal_error!("catch body is required".to_string()),
-                    };
+                    let catch_body = &list[2];
                     let catch_body = seq!(catch_body.clone());
 
                     match catch_body.get(0) {
