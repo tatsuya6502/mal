@@ -818,7 +818,10 @@ fn meta(args: Vec<MalType>) -> MalResult {
     let v = &args[0];
 
     let ret = match *v {
-        MalList(_, ref meta) |MalVector(_, ref meta) | MalHashMap(_, ref meta)  | MalFunc(_, ref meta) => {
+        MalList(_, ref meta) |
+        MalVector(_, ref meta) |
+        MalHashMap(_, ref meta) |
+        MalFunc(_, ref meta) => {
             if let Some(meta) = *meta.clone() {
                 meta
             } else {
