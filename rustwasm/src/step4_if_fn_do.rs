@@ -12,10 +12,7 @@ use printer::{pr_str, println};
 
 // READ
 fn read(str: String) -> MalResult {
-    match read_str(str) {
-        Ok(v) => Ok(v),
-        Err(v) => mal_error!(v),
-    }
+    read_str(str).or_else(|e| mal_error!(e))
 }
 
 fn eval_ast(ast: MalType, env: Env) -> MalResult {
@@ -173,10 +170,14 @@ fn print(exp: MalType) -> Result<String, MalError> {
     Ok(pr_str(&exp, true))
 }
 
-pub fn rep(str: String, env: &Env) -> Result<String, MalError> {
-    let ast = try!(read(str));
+pub fn rep(str: &str, env: &Env) -> Result<String, MalError> {
+    let ast = try!(read(str.to_string()));
     let exp = try!(eval(ast, env.clone()));
     print(exp)
+}
+
+fn rep_or_panic(str: &str, env: &Env, line: u32) {
+    rep(str, env).expect(&format!("rep on `{}` failed at {}:{}", str, file!(), line));
 }
 
 pub fn new_repl_env() -> Env {
@@ -188,11 +189,8 @@ pub fn new_repl_env() -> Env {
     }
 
     // core.mal: defined using the language itself
-    match rep("(def! not (fn* (a) (if a false true)))".to_string(),
-              &repl_env) {
-        Err(x) => panic!("{:?}", x),
-        _ => {}
-    };
+    rep_or_panic("(def! not (fn* (a) (if a false true)))",
+                 &repl_env, line!());
 
     repl_env
 }
@@ -205,7 +203,7 @@ pub fn run() {
         if let None = line {
             break;
         }
-        let result = rep(line.unwrap(), &repl_env);
+        let result = rep(&line.unwrap(), &repl_env);
         match result {
             Ok(message) => println(message),
             Err(MalError::ErrorMessage(message)) => println(message),

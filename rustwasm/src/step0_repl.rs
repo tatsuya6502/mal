@@ -18,8 +18,8 @@ fn print(exp: String) -> Result<String, MalError> {
     Ok(exp)
 }
 
-pub fn rep(str: String) -> Result<String, MalError> {
-    let ast = try!(read(str));
+pub fn rep(str: &str) -> Result<String, MalError> {
+    let ast = try!(read(str.to_string()));
     let exp = try!(eval(ast, "".to_string()));
     print(exp)
 }
@@ -30,7 +30,7 @@ pub fn run() {
         if let None = line {
             break;
         }
-        let result = rep(line.unwrap());
+        let result = rep(&line.unwrap());
         match result {
             Ok(message) => println(message),
             Err(MalError::ErrorMessage(message)) => println(message),

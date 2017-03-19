@@ -246,9 +246,8 @@ fn slurp(args: Vec<MalType>) -> MalResult {
     };
 
     let mut s = String::new();
-    match file.read_to_string(&mut s) {
-        Err(why) => return mal_error!(format!("can't read {}, {}", str, why.description())),
-        _ => {}
+    if let Err(why) = file.read_to_string(&mut s) {
+        return mal_error!(format!("can't read {}, {}", str, why.description()));
     };
 
     Ok(MalString(s))
@@ -633,9 +632,8 @@ fn first(args: Vec<MalType>) -> MalResult {
 
     let list = args.get(0).unwrap();
 
-    match list {
-        &MalNil => return Ok(MalNil),
-        _ => {}
+    if list == &MalNil {
+        return Ok(MalNil);
     };
 
     let list = seq!(list.clone());
@@ -655,9 +653,8 @@ fn rest(args: Vec<MalType>) -> MalResult {
 
     let list = args.get(0).unwrap();
 
-    match list {
-        &MalNil => return Ok(MalList(vec![], Box::new(None))),
-        _ => {}
+    if list == &MalNil {
+        return Ok(MalList(vec![], Box::new(None)));
     };
 
     let list = seq!(list.clone());

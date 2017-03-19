@@ -14,10 +14,7 @@ use printer::{pr_str, println};
 
 // READ
 fn read(str: String) -> MalResult {
-    match read_str(str) {
-        Ok(v) => Ok(v),
-        Err(v) => mal_error!(v),
-    }
+    read_str(str).or_else(|e| mal_error!(e))
 }
 
 fn is_pair(ast: MalType) -> bool {
@@ -51,25 +48,22 @@ fn quasiquote(ast: MalType) -> MalResult {
 
     if is_pair(arg1.clone()) {
         let arg1_list = seq!(arg1.clone());
-        match arg1_list.get(0) {
-            Some(arg11) => {
-                if let &MalSymbol(ref symbol) = arg11 {
-                    if symbol == "splice-unquote" {
-                        let arg12 = match arg1_list.get(1) {
-                            Some(ast) => ast,
-                            None => {
-                                return mal_error!("splice-unquote: 1 argument required".to_string())
-                            }
-                        };
-                        return Ok(MalList(vec![MalSymbol("concat".to_string()),
-                                               arg12.clone(),
-                                               try!(quasiquote(MalList((&list[1..]).to_vec(),
-                                                                       Box::new(None))))],
-                                          Box::new(None)));
-                    }
+        if let Some(arg11) = arg1_list.get(0) {
+            if let &MalSymbol(ref symbol) = arg11 {
+                if symbol == "splice-unquote" {
+                    let arg12 = match arg1_list.get(1) {
+                        Some(ast) => ast,
+                        None => {
+                            return mal_error!("splice-unquote: 1 argument required".to_string())
+                        }
+                    };
+                    return Ok(MalList(vec![MalSymbol("concat".to_string()),
+                                           arg12.clone(),
+                                           try!(quasiquote(MalList((&list[1..]).to_vec(),
+                                                                   Box::new(None))))],
+                                      Box::new(None)));
                 }
             }
-            None => {}
         };
 
     }
@@ -267,10 +261,14 @@ fn print(exp: MalType) -> Result<String, MalError> {
     Ok(pr_str(&exp, true))
 }
 
-pub fn rep(str: String, env: &Env) -> Result<String, MalError> {
-    let ast = try!(read(str));
+pub fn rep(str: &str, env: &Env) -> Result<String, MalError> {
+    let ast = try!(read(str.to_string()));
     let exp = try!(eval(ast, env.clone()));
     print(exp)
+}
+
+fn rep_or_panic(str: &str, env: &Env, line: u32) {
+    rep(str, env).expect(&format!("rep on `{}` failed at {}:{}", str, file!(), line));
 }
 
 pub fn new_repl_env() -> Env {
@@ -284,17 +282,10 @@ pub fn new_repl_env() -> Env {
     repl_env.set("eval".to_string(), func_for_eval(eval, repl_env.clone()));
 
     // core.mal: defined using the language itself
-    match rep("(def! not (fn* (a) (if a false true)))".to_string(),
-              &repl_env) {
-        Err(x) => panic!("{:?}", x),
-        _ => {}
-    };
-    match rep(r##"(def! load-file (fn* (f) (eval (read-string (str "(do " (slurp f) ")")))))"##
-                  .to_string(),
-              &repl_env) {
-        Err(x) => panic!("{:?}", x),
-        _ => {}
-    };
+    rep_or_panic("(def! not (fn* (a) (if a false true)))",
+                 &repl_env, line!());
+    rep_or_panic(r##"(def! load-file (fn* (f) (eval (read-string (str "(do " (slurp f) ")")))))"##,
+                 &repl_env, line!());
 
     repl_env
 }
@@ -302,7 +293,7 @@ pub fn new_repl_env() -> Env {
 #[cfg(not(target_arch="wasm32"))]
 fn load_file(source: String, env: &Env) {
     let load = format!(r##"(load-file "{}")"##, source);
-    let ret = rep(load, env);
+    let ret = rep(&load, env);
     match ret {
         Ok(_) => process::exit(0),
         Err(v) => {
@@ -335,7 +326,7 @@ pub fn run(args: Vec<String>) {
         if let None = line {
             break;
         }
-        let result = rep(line.unwrap(), &repl_env);
+        let result = rep(&line.unwrap(), &repl_env);
         match result {
             Ok(message) => println(message),
             Err(MalError::ErrorMessage(message)) => println(message),
