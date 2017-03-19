@@ -745,14 +745,13 @@ fn conj(args: Vec<MalType>) -> MalResult {
     let ret = match *list {
         MalList(ref list, _) => {
             let mut ret_list: Vec<MalType> = vec![];
-            for i in 1..args.len() {
-                let v = &args[i];
+            for v in args.iter().skip(1) {
                 let mut temp_list: Vec<MalType> = vec![v.clone()];
                 temp_list.extend(ret_list);
                 ret_list = temp_list;
             }
-            for i in 0..list.len() {
-                ret_list.push(list[i].clone());
+            for v in list {
+                ret_list.push(v.clone());
             }
 
             MalList(ret_list, Box::new(None))
