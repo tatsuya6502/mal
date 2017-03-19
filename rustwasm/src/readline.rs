@@ -27,8 +27,9 @@ mod normal {
     }
 
     pub fn add_history(line: &str) {
+        let cline = CString::new(line).unwrap();
         unsafe {
-            ext_readline::add_history(CString::new(line).unwrap().as_ptr());
+            ext_readline::add_history(cline.as_ptr());
         }
     }
 
