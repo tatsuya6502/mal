@@ -456,9 +456,8 @@ fn dissoc(args: Vec<MalType>) -> MalResult {
     let mut new_hash_map: HashMap<MalHashMapKey, MalType> = HashMap::new();
     new_hash_map.extend(hash_map);
 
-    for i in 0..rest.len() {
-        let key = &rest[i];
-        let key = match *key {
+    for key in rest {
+        let key = match key {
             MalString(ref v) => MalHashMapKey::MalString(v.to_string()),
             MalKeyword(ref v) => MalHashMapKey::MalKeyword(v.to_string()),
             _ => {
