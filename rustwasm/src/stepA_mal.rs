@@ -219,12 +219,9 @@ fn eval(ast: MalType, env: Env) -> MalResult {
                     let pairs = &list[1];
                     let expr = &list[2];
                     let list = seq!(pairs.clone());
-                    for i in 0..list.len() {
-                        if i % 2 == 1 {
-                            continue;
-                        }
-                        let key = &list[i];
-                        let value = &list[i + 1];
+                    for kv in list.chunks(2) {
+                        let key = &kv[0];
+                        let value = &kv[1];
                         let key = match key {
                             &MalSymbol(ref v) => v,
                             _ => {
@@ -470,7 +467,8 @@ pub fn new_repl_env() -> Env {
         Err(x) => panic!("{:?}", x),
         _ => {}
     };
-    match rep(r##"(def! gensym (fn* [] (symbol (str "G__" (swap! *gensym-counter* (fn* [x] (+ 1 x)))))))"##                  .to_string(),
+    match rep(r##"(def! gensym (fn* [] (symbol (str "G__" (swap! *gensym-counter* (fn* [x] (+ 1 x)))))))"##
+                  .to_string(),
               &repl_env) {
         Err(x) => panic!("{:?}", x),
         _ => {}
