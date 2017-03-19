@@ -6,10 +6,7 @@ use printer::{pr_str, println};
 
 // READ
 fn read(str: String) -> MalResult {
-    match read_str(str) {
-        Ok(v) => Ok(v),
-        Err(v) => mal_error!(v),
-    }
+    read_str(str).or_else(|e| mal_error!(e))
 }
 
 // EVAL
@@ -22,8 +19,8 @@ fn print(exp: MalType) -> Result<String, MalError> {
     Ok(pr_str(&exp, true))
 }
 
-pub fn rep(str: String) -> Result<String, MalError> {
-    let ast = try!(read(str));
+pub fn rep(str: &str) -> Result<String, MalError> {
+    let ast = try!(read(str.to_string()));
     let exp = try!(eval(ast, "".to_string()));
     print(exp)
 }
@@ -34,7 +31,7 @@ pub fn run() {
         if let None = line {
             break;
         }
-        let result = rep(line.unwrap());
+        let result = rep(&line.unwrap());
         match result {
             Ok(message) => println(message),
             Err(MalError::ErrorMessage(message)) => println(message),

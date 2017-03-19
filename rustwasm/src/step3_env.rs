@@ -11,10 +11,7 @@ use printer::{pr_str, println};
 
 // READ
 fn read(str: String) -> MalResult {
-    match read_str(str) {
-        Ok(v) => Ok(v),
-        Err(v) => mal_error!(v),
-    }
+    read_str(str).or_else(|e| mal_error!(e))
 }
 
 fn eval_ast(ast: MalType, env: Env) -> MalResult {
@@ -124,8 +121,8 @@ fn print(exp: MalType) -> Result<String, MalError> {
     Ok(pr_str(&exp, true))
 }
 
-pub fn rep(str: String, env: &Env) -> Result<String, MalError> {
-    let ast = try!(read(str));
+pub fn rep(str: &str, env: &Env) -> Result<String, MalError> {
+    let ast = try!(read(str.to_string()));
     let exp = try!(eval(ast, env.clone()));
     print(exp)
 }
@@ -194,7 +191,7 @@ pub fn run() {
         if let None = line {
             break;
         }
-        let result = rep(line.unwrap(), &repl_env);
+        let result = rep(&line.unwrap(), &repl_env);
         match result {
             Ok(message) => println(message),
             Err(MalError::ErrorMessage(message)) => println(message),
