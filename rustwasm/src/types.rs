@@ -143,8 +143,7 @@ impl MalFuncData {
         if let Some(func) = self.func {
             func(args)
         } else if let Some(ref container) = self.closure {
-            let new_env =
-                try!(Env::new(Some(container.env.clone()), container.params.clone(), args));
+            let new_env = Env::new(Some(container.env.clone()), container.params.clone(), args)?;
             (container.eval)(container.ast.clone(), new_env)
         } else if let Some(ref container) = self.eval {
             if args.len() != 1 {
@@ -159,7 +158,7 @@ impl MalFuncData {
 
     pub fn tco_apply(&self, args: Vec<MalType>) -> Result<Option<(MalType, Env)>, String> {
         if let Some(ref data) = self.closure {
-            let new_env = try!(Env::new(Some(data.env.clone()), data.params.clone(), args));
+            let new_env = Env::new(Some(data.env.clone()), data.params.clone(), args)?;
             Ok(Some((data.ast.clone(), new_env)))
         } else {
             Ok(None)

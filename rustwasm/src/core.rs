@@ -39,7 +39,7 @@ fn equal(args: Vec<MalType>) -> MalResult {
             for i in 0..a.len() {
                 let a_v = &a[i];
                 let b_v = &b[i];
-                let ret = try!(equal(vec![a_v.clone(), b_v.clone()]));
+                let ret = equal(vec![a_v.clone(), b_v.clone()])?;
                 match ret {
                     MalBool(true) => continue,
                     MalBool(false) => return Ok(MalBool(false)),
@@ -63,7 +63,7 @@ fn equal(args: Vec<MalType>) -> MalResult {
                     Some(v) => v,
                     None => return Ok(MalBool(false)),
                 };
-                let ret = try!(equal(vec![a_v.clone(), b_v.clone()]));
+                let ret = equal(vec![a_v.clone(), b_v.clone()])?;
                 match ret {
                     MalBool(true) => continue,
                     MalBool(false) => return Ok(MalBool(false)),
@@ -395,7 +395,7 @@ fn is_vector(args: Vec<MalType>) -> MalResult {
 }
 
 fn hash_map(args: Vec<MalType>) -> MalResult {
-    Ok(try!(vec_to_hash_map(args)))
+    vec_to_hash_map(args)
 }
 
 fn is_map(args: Vec<MalType>) -> MalResult {
@@ -408,7 +408,7 @@ fn is_map(args: Vec<MalType>) -> MalResult {
 }
 
 fn assoc(args: Vec<MalType>) -> MalResult {
-    if args.len() == 0 {
+    if args.is_empty() {
         return mal_error!("assoc: 1 or more argument(s) is required".to_string());
     }
 
@@ -422,7 +422,7 @@ fn assoc(args: Vec<MalType>) -> MalResult {
     };
 
     let rest = (&args[1..]).to_vec();
-    let rest = try!(vec_to_hash_map(rest));
+    let rest = vec_to_hash_map(rest)?;
     let rest = match rest {
         MalHashMap(ref v, _) => v.clone(),
         _ => {
@@ -438,7 +438,7 @@ fn assoc(args: Vec<MalType>) -> MalResult {
 }
 
 fn dissoc(args: Vec<MalType>) -> MalResult {
-    if args.len() == 0 {
+    if args.is_empty() {
         return mal_error!("dissoc: 1 or more argument(s) is required".to_string());
     }
 
@@ -658,7 +658,7 @@ fn rest(args: Vec<MalType>) -> MalResult {
     };
 
     let list = seq!(list.clone());
-    if list.len() == 0 {
+    if list.is_empty() {
         return Ok(MalList(vec![], Box::new(None)));
     }
 
@@ -676,7 +676,7 @@ fn is_empty(args: Vec<MalType>) -> MalResult {
         &MalVector(ref list, _) => list,
         _ => return Ok(MalBool(false)),
     };
-    Ok(MalBool(list.len() == 0))
+    Ok(MalBool(list.is_empty()))
 }
 
 fn count(args: Vec<MalType>) -> MalResult {
@@ -694,7 +694,7 @@ fn count(args: Vec<MalType>) -> MalResult {
 }
 
 fn apply(args: Vec<MalType>) -> MalResult {
-    if args.len() == 0 {
+    if args.is_empty() {
         return mal_error!("apply: 1 or more argument(s) is required".to_string());
     }
     let f = args.get(0).unwrap();
@@ -728,7 +728,7 @@ fn map(args: Vec<MalType>) -> MalResult {
 
     let mut ret = vec![];
     for v in list {
-        let v = try!(f.apply(vec![v]));
+        let v = f.apply(vec![v])?;
         ret.push(v);
     }
 
@@ -783,7 +783,7 @@ fn seq(args: Vec<MalType>) -> MalResult {
     let ret = match v {
         &MalList(ref list, _) |
         &MalVector(ref list, _) => {
-            if list.len() == 0 {
+            if list.is_empty() {
                 MalNil
             } else {
                 MalList(list.clone(), Box::new(None))
@@ -944,7 +944,7 @@ fn swap(args: Vec<MalType>) -> MalResult {
     let mut func_args: Vec<MalType> = vec![atom_value.borrow().clone()];
     func_args.extend((&args[2..]).iter().cloned());
 
-    let result = try!(f.apply(func_args));
+    let result = f.apply(func_args)?;
     (*atom_value.borrow_mut()) = result.clone();
 
     Ok(result)

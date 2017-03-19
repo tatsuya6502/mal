@@ -117,7 +117,7 @@ fn tokenizer(str: String) -> Vec<String> {
 }
 
 fn read_form(reader: &mut Reader) -> MalResult {
-    let token = try!(reader.peek());
+    let token = reader.peek()?;
     match token.as_ref() {
         "(" => read_list(reader),
         "[" => read_vector(reader),
@@ -128,10 +128,10 @@ fn read_form(reader: &mut Reader) -> MalResult {
         "~@" => read_special_symbol(reader, "splice-unquote".to_string()),
         "@" => read_special_symbol(reader, "deref".to_string()),
         "^" => {
-            try!(reader.next()); // drop
+            reader.next()?; // drop
             let sym = MalSymbol("with-meta".to_string());
-            let meta = try!(read_form(reader));
-            let target = try!(read_form(reader));
+            let meta = read_form(reader)?;
+            let target = read_form(reader)?;
             Ok(MalList(vec![sym, target, meta], Box::new(None)))
         }
         _ => read_atom(reader),
@@ -139,74 +139,74 @@ fn read_form(reader: &mut Reader) -> MalResult {
 }
 
 fn read_special_symbol(reader: &mut Reader, name: String) -> MalResult {
-    try!(reader.next()); // drop
+    reader.next()?; // drop
     let sym = MalSymbol(name);
-    let target = try!(read_form(reader));
+    let target = read_form(reader)?;
     Ok(MalList(vec![sym, target], Box::new(None)))
 }
 
 fn read_list(reader: &mut Reader) -> MalResult {
-    let token = try!(reader.next()); // drop open paren
+    let token = reader.next()?; // drop open paren
     if token != "(" {
         return mal_error!(format!("unexpected token {}, expected (", token));
     }
 
     let mut list: Vec<MalType> = vec![];
     loop {
-        let next = try!(reader.peek());
+        let next = reader.peek()?;
         if next == ")" {
             break;
         }
-        list.push(try!(read_form(reader)));
+        list.push(read_form(reader)?);
     }
 
-    try!(reader.next()); // drop close paren
+    reader.next()?; // drop close paren
 
     Ok(MalList(list, Box::new(None)))
 }
 
 fn read_vector(reader: &mut Reader) -> MalResult {
-    let token = try!(reader.next()); // drop open paren
+    let token = reader.next()?; // drop open paren
     if token != "[" {
         return mal_error!(format!("unexpected token {}, expected [", token));
     }
 
     let mut list: Vec<MalType> = vec![];
     loop {
-        let next = try!(reader.peek());
+        let next = reader.peek()?;
         if next == "]" {
             break;
         }
-        list.push(try!(read_form(reader)));
+        list.push(read_form(reader)?);
     }
 
-    try!(reader.next()); // drop close paren
+    reader.next()?; // drop close paren
 
     Ok(MalVector(list, Box::new(None)))
 }
 
 fn read_hash_map(reader: &mut Reader) -> MalResult {
-    let token = try!(reader.next()); // drop open paren
+    let token = reader.next()?; // drop open paren
     if token != "{" {
         return mal_error!(format!("unexpected token {}, expected {{", token));
     }
 
     let mut list: Vec<MalType> = vec![];
     loop {
-        let next = try!(reader.peek());
+        let next = reader.peek()?;
         if next == "}" {
             break;
         }
-        list.push(try!(read_form(reader)));
+        list.push(read_form(reader)?);
     }
 
-    try!(reader.next()); // drop close paren
+    reader.next()?; // drop close paren
 
     vec_to_hash_map(list)
 }
 
 fn read_atom(reader: &mut Reader) -> MalResult {
-    let token = try!(reader.next());
+    let token = reader.next()?;
     if let Ok(v) = token.parse::<i64>() {
         return Ok(MalNumber(v));
     }

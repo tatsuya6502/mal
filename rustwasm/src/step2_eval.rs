@@ -54,13 +54,13 @@ fn eval(ast: MalType, env: Env) -> MalResult {
         MalList(list, _) => list,
         _ => return eval_ast(ast, env),
     };
-    if list.len() == 0 {
+    if list.is_empty() {
         return Ok(MalList(list, Box::new(None)));
     }
 
     let ast = try!(eval_ast(MalList(list, Box::new(None)), env.clone()));
     let list = seq!(ast);
-    if list.len() == 0 {
+    if list.is_empty() {
         return mal_error!("unexpected state: len == 0".to_string());
     }
 
