@@ -86,7 +86,7 @@ pub mod wasm {
         let env = unsafe { &mut *ptr };
 
         let v = unsafe { CStr::from_ptr(v) };
-        let v = v.to_str().unwrap().to_string();
+        let v = v.to_str().unwrap();
 
         let ret = latest_step::rep(v, env);
         let mal_result = match ret {

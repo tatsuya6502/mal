@@ -15,29 +15,29 @@ fn eval(ast: MalType, _env: String) -> MalResult {
 }
 
 // PRINT
-fn print(exp: MalType) -> Result<String, MalError> {
-    Ok(pr_str(&exp, true))
+fn print(exp: &MalType) -> Result<String, MalError> {
+    Ok(pr_str(exp, true))
 }
 
 pub fn rep(str: &str) -> Result<String, MalError> {
     let ast = try!(read(str.to_string()));
     let exp = try!(eval(ast, "".to_string()));
-    print(exp)
+    print(&exp)
 }
 
 pub fn run() {
     loop {
         let line = mal_readline("user> ");
-        if let None = line {
+        if line.is_none() {
             break;
         }
         let result = rep(&line.unwrap());
         match result {
-            Ok(message) => println(message),
+            Ok(message) |
             Err(MalError::ErrorMessage(message)) => println(message),
             Err(MalError::ThrowAST(ref ast)) => {
                 println(format!("receive exception: {}", pr_str(ast, true)))
             }
-        }
+        };
     }
 }

@@ -44,7 +44,7 @@ mod normal {
                 let ret = str::from_utf8(CStr::from_ptr(ptr).to_bytes());
                 let ret = ret.ok().map(|s| s.to_string());
                 libc::free(ptr as *mut _);
-                return ret;
+                ret
             }
         }
     }
@@ -54,7 +54,7 @@ mod normal {
     static mut HISTORY_LOADED: bool = false;
 
     fn get_history_file() -> PathBuf {
-        let mut path = env::home_dir().unwrap_or(PathBuf::from("/home/joelm"));
+        let mut path = env::home_dir().unwrap_or_else(|| PathBuf::from("/home/joelm"));
         path.push(".mal-history".to_string());
         path
     }

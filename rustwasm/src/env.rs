@@ -67,7 +67,7 @@ impl Env {
             Some(env) => {
                 let env_data = env.env.borrow();
                 let v = env_data.data.get(key.as_str());
-                v.map(|v| v.clone())
+                v.cloned()
             }
             None => None,
         }

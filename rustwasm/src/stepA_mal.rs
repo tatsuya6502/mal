@@ -140,7 +140,7 @@ fn eval_ast(ast: MalType, env: &Env) -> MalResult {
         MalSymbol(ref v) => {
             match env.get(v.to_string()) {
                 Some(ast) => Ok(ast.clone()),
-                None => return mal_error!(format!("'{}' not found", v)),
+                None => mal_error!(format!("'{}' not found", v)),
             }
         }
         MalList(list, _) => {
@@ -437,15 +437,17 @@ pub fn new_repl_env() -> Env {
 
     // core.mal: defined using the language itself
     rep_or_panic(r##"(def! *host-language* "rust+wasm")""##,
-                 &repl_env, line!());
+                 &repl_env,
+                 line!());
     rep_or_panic(r##"(def! not (fn* (a) (if a false true)))"##,
-                 &repl_env, line!());
+                 &repl_env,
+                 line!());
     rep_or_panic(r##"(def! load-file (fn* (f) (eval (read-string (str "(do " (slurp f) ")")))))"##,
-                 &repl_env, line!());
+                 &repl_env,
+                 line!());
     rep_or_panic(r##"(defmacro! cond (fn* (& xs) (if (> (count xs) 0) (list 'if (first xs) (if (> (count xs) 1) (nth xs 1) (throw "odd number of forms to cond")) (cons 'cond (rest (rest xs)))))))"##,
                  &repl_env, line!());
-    rep_or_panic(r##"(def! *gensym-counter* (atom 0))"##,
-                 &repl_env, line!());
+    rep_or_panic(r##"(def! *gensym-counter* (atom 0))"##, &repl_env, line!());
     rep_or_panic(r##"(def! gensym (fn* [] (symbol (str "G__" (swap! *gensym-counter* (fn* [x] (+ 1 x)))))))"##,
                  &repl_env, line!());
     rep_or_panic(r##"(defmacro! or (fn* (& xs) (if (empty? xs) nil (if (= 1 (count xs)) (first xs) (let* (condvar (gensym)) `(let* (~condvar ~(first xs)) (if ~condvar ~condvar (or ~@(rest xs)))))))))"##,
@@ -468,7 +470,7 @@ fn load_file(source: &str, env: &Env) {
 }
 
 #[cfg(target_arch="wasm32")]
-fn load_file(_source: String, _env: &Env) {
+fn load_file(_source: &str, _env: &Env) {
     unimplemented!()
 }
 
@@ -486,7 +488,8 @@ pub fn run(args: &[String]) {
     }
 
     rep_or_panic(r##"(println (str "Mal [" *host-language* "]"))"##,
-                 &repl_env, line!());
+                 &repl_env,
+                 line!());
 
     loop {
         let line = mal_readline("user> ");

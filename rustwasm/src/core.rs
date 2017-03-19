@@ -27,8 +27,8 @@ fn equal(args: Vec<MalType>) -> MalResult {
         return mal_error!("=: 2 arguments required".to_string());
     }
 
-    let v0 = args.get(0).unwrap();
-    let v1 = args.get(1).unwrap();
+    let v0 = &args[0];
+    let v1 = &args[1];
 
     match (v0, v1) {
         (&MalList(ref a, _), &MalVector(ref b, _)) |
@@ -85,7 +85,7 @@ fn throw(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
         return mal_error!("throw: 1 argument required".to_string());
     }
-    let v = args.get(0).unwrap();
+    let v = &args[0];
 
     mal_error!(v.clone())
 }
@@ -130,9 +130,9 @@ fn symbol(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
         return mal_error!("symbol: 1 argument required".to_string());
     }
-    let v = args.get(0).unwrap();
-    let v = match v {
-        &MalString(ref v) => v,
+    let v = &args[0];
+    let v = match *v {
+        MalString(ref v) => v,
         _ => return mal_error!(format!("unexpected symbol. expected: string, actual: {:?}", v)),
     };
 
@@ -152,9 +152,9 @@ fn keyword(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
         return mal_error!("keyword: 1 argument required".to_string());
     }
-    let v = args.get(0).unwrap();
-    let v = match v {
-        &MalString(ref v) => v,
+    let v = &args[0];
+    let v = match *v {
+        MalString(ref v) => v,
         _ => return mal_error!(format!("unexpected symbol. expected: string, actual: {:?}", v)),
     };
 
@@ -196,10 +196,10 @@ fn read_string(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
         return mal_error!("read-string: 1 argument required".to_string());
     }
-    let v = args.get(0).unwrap();
+    let v = &args[0];
 
-    let str = match v {
-        &MalString(ref str) => str,
+    let str = match *v {
+        MalString(ref str) => str,
         _ => return mal_error!(format!("unexpected symbol. expected: string, actual: {:?}", v)),
     };
 
@@ -213,10 +213,10 @@ fn readline(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
         return mal_error!("readline: 1 argument required".to_string());
     }
-    let v = args.get(0).unwrap();
+    let v = &args[0];
 
-    let str = match v {
-        &MalString(ref str) => str,
+    let str = match *v {
+        MalString(ref str) => str,
         _ => return mal_error!(format!("unexpected symbol. expected: string, actual: {:?}", v)),
     };
 
@@ -233,10 +233,10 @@ fn slurp(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
         return mal_error!("slurp: 1 argument required".to_string());
     }
-    let v = args.get(0).unwrap();
+    let v = &args[0];
 
-    let str = match v {
-        &MalString(ref str) => str,
+    let str = match *v {
+        MalString(ref str) => str,
         _ => return mal_error!(format!("unexpected symbol. expected: string, actual: {:?}", v)),
     };
 
@@ -372,10 +372,10 @@ fn is_list(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
         return mal_error!("list?: 1 argument required".to_string());
     }
-    let v = args.get(0).unwrap();
+    let v = &args[0];
 
-    let ret = match v {
-        &MalList(_, _) => true,
+    let ret = match *v {
+        MalList(_, _) => true,
         _ => false,
     };
     Ok(MalBool(ret))
@@ -412,9 +412,9 @@ fn assoc(args: Vec<MalType>) -> MalResult {
         return mal_error!("assoc: 1 or more argument(s) is required".to_string());
     }
 
-    let hash_map = args.get(0).unwrap();
-    let hash_map = match hash_map {
-        &MalHashMap(ref v, _) => v.clone(),
+    let hash_map = &args[0];
+    let hash_map = match *hash_map {
+        MalHashMap(ref v, _) => v.clone(),
         _ => {
             return mal_error!(format!("unexpected symbol. expected: hash-map, actual: {:?}",
                                       hash_map))
@@ -442,9 +442,9 @@ fn dissoc(args: Vec<MalType>) -> MalResult {
         return mal_error!("dissoc: 1 or more argument(s) is required".to_string());
     }
 
-    let hash_map = args.get(0).unwrap();
-    let hash_map = match hash_map {
-        &MalHashMap(ref v, _) => v.clone(),
+    let hash_map = &args[0];
+    let hash_map = match *hash_map {
+        MalHashMap(ref v, _) => v.clone(),
         _ => {
             return mal_error!(format!("unexpected symbol. expected: hash-map, actual: {:?}",
                                       hash_map))
@@ -457,10 +457,10 @@ fn dissoc(args: Vec<MalType>) -> MalResult {
     new_hash_map.extend(hash_map);
 
     for i in 0..rest.len() {
-        let key = rest.get(i).unwrap();
-        let key = match key {
-            &MalString(ref v) => MalHashMapKey::MalString(v.to_string()),
-            &MalKeyword(ref v) => MalHashMapKey::MalKeyword(v.to_string()),
+        let key = &rest[i];
+        let key = match *key {
+            MalString(ref v) => MalHashMapKey::MalString(v.to_string()),
+            MalKeyword(ref v) => MalHashMapKey::MalKeyword(v.to_string()),
             _ => {
                 return mal_error!(format!("unexpected symbol. expected: string or keyword, \
                                            actual: {:?}",
@@ -478,17 +478,17 @@ fn get(args: Vec<MalType>) -> MalResult {
         return mal_error!("get: 2 arguments required".to_string());
     }
 
-    let v = args.get(0).unwrap();
-    let hash_map = match v {
-        &MalNil => return Ok(MalNil),
-        &MalHashMap(ref v, _) => v,
+    let v = &args[0];
+    let hash_map = match *v {
+        MalNil => return Ok(MalNil),
+        MalHashMap(ref v, _) => v,
         _ => return mal_error!(format!("unexpected symbol. expected: hash-map, actual: {:?}", v)),
     };
 
-    let key = args.get(1).unwrap();
-    let key = match key {
-        &MalString(ref v) => MalHashMapKey::MalString(v.to_string()),
-        &MalKeyword(ref v) => MalHashMapKey::MalKeyword(v.to_string()),
+    let key = &args[1];
+    let key = match *key {
+        MalString(ref v) => MalHashMapKey::MalString(v.to_string()),
+        MalKeyword(ref v) => MalHashMapKey::MalKeyword(v.to_string()),
         _ => {
             return mal_error!(format!("unexpected symbol. expected: string or keyword, actual: \
                                        {:?}",
@@ -507,16 +507,16 @@ fn is_contains(args: Vec<MalType>) -> MalResult {
         return mal_error!("contains?: 2 arguments required".to_string());
     }
 
-    let v = args.get(0).unwrap();
-    let hash_map = match v {
-        &MalHashMap(ref v, _) => v,
+    let v = &args[0];
+    let hash_map = match *v {
+        MalHashMap(ref v, _) => v,
         _ => return mal_error!(format!("unexpected symbol. expected: hash-map, actual: {:?}", v)),
     };
 
-    let key = args.get(1).unwrap();
-    let key = match key {
-        &MalString(ref v) => MalHashMapKey::MalString(v.to_string()),
-        &MalKeyword(ref v) => MalHashMapKey::MalKeyword(v.to_string()),
+    let key = &args[1];
+    let key = match *key {
+        MalString(ref v) => MalHashMapKey::MalString(v.to_string()),
+        MalKeyword(ref v) => MalHashMapKey::MalKeyword(v.to_string()),
         _ => {
             return mal_error!(format!("unexpected symbol. expected: string or keyword, actual: \
                                        {:?}",
@@ -530,17 +530,17 @@ fn keys(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
         return mal_error!("keys: 1 argument required".to_string());
     }
-    let v = args.get(0).unwrap();
-    let hash_map = match v {
-        &MalHashMap(ref v, _) => v,
+    let v = &args[0];
+    let hash_map = match *v {
+        MalHashMap(ref v, _) => v,
         _ => return mal_error!(format!("unexpected symbol. expected: hash-map, actual: {:?}", v)),
     };
 
     let mut ret = vec![];
-    for (key, _) in hash_map {
-        let key = match key {
-            &MalHashMapKey::MalString(ref v) => MalString(v.to_string()),
-            &MalHashMapKey::MalKeyword(ref v) => MalKeyword(v.to_string()),
+    for key in hash_map.keys() {
+        let key = match *key {
+            MalHashMapKey::MalString(ref v) => MalString(v.to_string()),
+            MalHashMapKey::MalKeyword(ref v) => MalKeyword(v.to_string()),
         };
         ret.push(key.clone());
     }
@@ -552,14 +552,14 @@ fn vals(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
         return mal_error!("vals: 1 argument required".to_string());
     }
-    let v = args.get(0).unwrap();
-    let hash_map = match v {
-        &MalHashMap(ref v, _) => v,
+    let v = &args[0];
+    let hash_map = match *v {
+        MalHashMap(ref v, _) => v,
         _ => return mal_error!(format!("unexpected symbol. expected: hash-map, actual: {:?}", v)),
     };
 
     let mut ret = vec![];
-    for (_, value) in hash_map {
+    for value in hash_map.values() {
         ret.push(value.clone());
     }
 
@@ -580,8 +580,8 @@ fn cons(args: Vec<MalType>) -> MalResult {
     if args.len() != 2 {
         return mal_error!("reset!: 2 arguments required".to_string());
     }
-    let v = args.get(0).unwrap();
-    let list = args.get(1).unwrap();
+    let v = &args[0];
+    let list = &args[1];
 
     let list = seq!(list.clone());
 
@@ -607,13 +607,13 @@ fn nth(args: Vec<MalType>) -> MalResult {
         return mal_error!("nth: 2 arguments are required".to_string());
     }
 
-    let list = args.get(0).unwrap();
-    let idx = args.get(1).unwrap();
+    let list = &args[0];
+    let idx = &args[1];
 
     let list = seq!(list.clone());
 
-    let idx = match idx {
-        &MalNumber(v) => v,
+    let idx = match *idx {
+        MalNumber(v) => v,
         _ => return mal_error!(format!("unexpected symbol. expected: number , actual: {:?}", idx)),
     };
 
@@ -630,7 +630,7 @@ fn first(args: Vec<MalType>) -> MalResult {
         return mal_error!("first: 1 or more argument(s) is required".to_string());
     }
 
-    let list = args.get(0).unwrap();
+    let list = &args[0];
 
     if list == &MalNil {
         return Ok(MalNil);
@@ -651,7 +651,7 @@ fn rest(args: Vec<MalType>) -> MalResult {
         return mal_error!("rest: 1 or more argument(s) is required".to_string());
     }
 
-    let list = args.get(0).unwrap();
+    let list = &args[0];
 
     if list == &MalNil {
         return Ok(MalList(vec![], Box::new(None)));
@@ -669,11 +669,11 @@ fn is_empty(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
         return mal_error!("empty?: 1 argument required".to_string());
     }
-    let v = args.get(0).unwrap();
+    let v = &args[0];
 
-    let list = match v {
-        &MalList(ref list, _) |
-        &MalVector(ref list, _) => list,
+    let list = match *v {
+        MalList(ref list, _) |
+        MalVector(ref list, _) => list,
         _ => return Ok(MalBool(false)),
     };
     Ok(MalBool(list.is_empty()))
@@ -683,11 +683,11 @@ fn count(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
         return mal_error!("count: 1 argument required".to_string());
     }
-    let v = args.get(0).unwrap();
+    let v = &args[0];
 
-    let list = match v {
-        &MalList(ref list, _) |
-        &MalVector(ref list, _) => list,
+    let list = match *v {
+        MalList(ref list, _) |
+        MalVector(ref list, _) => list,
         _ => return Ok(MalNumber(0)),
     };
     Ok(MalNumber(list.len() as i64))
@@ -697,13 +697,13 @@ fn apply(args: Vec<MalType>) -> MalResult {
     if args.is_empty() {
         return mal_error!("apply: 1 or more argument(s) is required".to_string());
     }
-    let f = args.get(0).unwrap();
-    let f = match f {
-        &MalFunc(ref v, _) => v,
+    let f = &args[0];
+    let f = match *f {
+        MalFunc(ref v, _) => v,
         _ => return mal_error!(format!("unexpected symbol. expected: function, actual: {:?}", f)),
     };
 
-    let tail = args.get(args.len() - 1).unwrap();
+    let tail = &args[args.len() - 1];
     let tail = seq!(tail.clone());
 
     let mut args = (&args[1..args.len() - 1]).to_vec();
@@ -717,13 +717,13 @@ fn map(args: Vec<MalType>) -> MalResult {
         return mal_error!("map: 2 or more arguments required".to_string());
     }
 
-    let f = args.get(0).unwrap();
-    let f = match f {
-        &MalFunc(ref v, _) => v,
+    let f = &args[0];
+    let f = match *f {
+        MalFunc(ref v, _) => v,
         _ => return mal_error!(format!("unexpected symbol. expected: function, actual: {:?}", f)),
     };
 
-    let list = args.get(1).unwrap();
+    let list = &args[1];
     let list = seq!(list.clone());
 
     let mut ret = vec![];
@@ -740,24 +740,24 @@ fn conj(args: Vec<MalType>) -> MalResult {
         return mal_error!("conj: 1 or more argument(s) is required".to_string());
     }
 
-    let list = args.get(0).unwrap();
+    let list = &args[0];
 
-    let ret = match list {
-        &MalList(ref list, _) => {
+    let ret = match *list {
+        MalList(ref list, _) => {
             let mut ret_list: Vec<MalType> = vec![];
             for i in 1..args.len() {
-                let v = args.get(i).unwrap();
+                let v = &args[i];
                 let mut temp_list: Vec<MalType> = vec![v.clone()];
                 temp_list.extend(ret_list);
                 ret_list = temp_list;
             }
             for i in 0..list.len() {
-                ret_list.push(list.get(i).unwrap().clone());
+                ret_list.push(list[i].clone());
             }
 
             MalList(ret_list, Box::new(None))
         }
-        &MalVector(ref list, _) => {
+        MalVector(ref list, _) => {
             let mut ret_list: Vec<MalType> = vec![];
             ret_list.extend(list.clone());
             ret_list.extend((&args[1..]).to_vec());
@@ -778,18 +778,18 @@ fn seq(args: Vec<MalType>) -> MalResult {
         return mal_error!("seq: 1 or more argument(s) is required".to_string());
     }
 
-    let v = args.get(0).unwrap();
+    let v = &args[0];
 
-    let ret = match v {
-        &MalList(ref list, _) |
-        &MalVector(ref list, _) => {
+    let ret = match *v {
+        MalList(ref list, _) |
+        MalVector(ref list, _) => {
             if list.is_empty() {
                 MalNil
             } else {
                 MalList(list.clone(), Box::new(None))
             }
         }
-        &MalString(ref str) => {
+        MalString(ref str) => {
             if str == "" {
                 MalNil
             } else {
@@ -801,7 +801,7 @@ fn seq(args: Vec<MalType>) -> MalResult {
                 MalList(strs, Box::new(None))
             }
         }
-        &MalNil => MalNil,
+        MalNil => MalNil,
         _ => {
             return mal_error!(format!("unexpected symbol. expected: list or vector or string or \
                                        nil, actual: {:?}",
@@ -817,31 +817,10 @@ fn meta(args: Vec<MalType>) -> MalResult {
         return mal_error!("meta: 1 or more argument(s) is required".to_string());
     }
 
-    let v = args.get(0).unwrap();
+    let v = &args[0];
 
-    let ret = match v {
-        &MalList(_, ref meta) => {
-            if let Some(meta) = *meta.clone() {
-                meta
-            } else {
-                MalNil
-            }
-        }
-        &MalVector(_, ref meta) => {
-            if let Some(meta) = *meta.clone() {
-                meta
-            } else {
-                MalNil
-            }
-        }
-        &MalHashMap(_, ref meta) => {
-            if let Some(meta) = *meta.clone() {
-                meta
-            } else {
-                MalNil
-            }
-        }
-        &MalFunc(_, ref meta) => {
+    let ret = match *v {
+        MalList(_, ref meta) |MalVector(_, ref meta) | MalHashMap(_, ref meta)  | MalFunc(_, ref meta) => {
             if let Some(meta) = *meta.clone() {
                 meta
             } else {
@@ -859,8 +838,8 @@ fn with_meta(args: Vec<MalType>) -> MalResult {
         return mal_error!("with-meta: 2 arguments are required".to_string());
     }
 
-    let v = args.get(0).unwrap();
-    let meta = args.get(1).unwrap();
+    let v = &args[0];
+    let meta = &args[1];
 
     let ret = match v {
         &MalList(ref v, _) => MalList(v.clone(), Box::new(Some(meta.clone()))),
@@ -877,7 +856,7 @@ fn atom(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
         return mal_error!("atom: 1 argument required".to_string());
     }
-    let v = args.get(0).unwrap();
+    let v = &args[0];
     Ok(MalAtom(Rc::new(RefCell::new(v.clone()))))
 }
 
@@ -885,10 +864,10 @@ fn is_atom(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
         return mal_error!("atom?: 1 argument required".to_string());
     }
-    let v = args.get(0).unwrap();
+    let v = &args[0];
 
-    let ret = match v {
-        &MalAtom(_) => true,
+    let ret = match *v {
+        MalAtom(_) => true,
         _ => false,
     };
     Ok(MalBool(ret))
@@ -898,7 +877,7 @@ fn deref(args: Vec<MalType>) -> MalResult {
     if args.len() != 1 {
         return mal_error!("deref: 1 argument required".to_string());
     }
-    let v = args.get(0).unwrap();
+    let v = &args[0];
 
     let v = match v {
         &MalAtom(ref v) => v,
@@ -911,8 +890,8 @@ fn reset(args: Vec<MalType>) -> MalResult {
     if args.len() != 2 {
         return mal_error!("reset!: 2 arguments required".to_string());
     }
-    let atom = args.get(0).unwrap();
-    let v = args.get(1).unwrap();
+    let atom = &args[0];
+    let v = &args[1];
 
     match atom {
         &MalAtom(ref atom) => {
@@ -929,13 +908,13 @@ fn swap(args: Vec<MalType>) -> MalResult {
         return mal_error!("swap!: 2 or more arguments required".to_string());
     }
 
-    let atom = args.get(0).unwrap();
+    let atom = &args[0];
     let atom_value = match atom {
         &MalAtom(ref v) => v,
         v => return mal_error!(format!("unexpected symbol. expected: atom, actual: {:?}", v)),
     };
 
-    let f = args.get(1).unwrap();
+    let f = &args[1];
     let f = match f {
         &MalFunc(ref v, _) => v,
         v => return mal_error!(format!("unexpected symbol. expected: function, actual: {:?}", v)),

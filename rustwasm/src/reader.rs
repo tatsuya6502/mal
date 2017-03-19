@@ -52,7 +52,7 @@ fn tokenizer(str: String) -> Vec<String> {
             None => break,
             Some(x) => x.as_str(),
         };
-        if group.starts_with(";") {
+        if group.starts_with(';') {
             continue;
         }
         tokens.push(group.to_owned());
@@ -210,14 +210,14 @@ fn read_atom(reader: &mut Reader) -> MalResult {
     if let Ok(v) = token.parse::<i64>() {
         return Ok(MalNumber(v));
     }
-    if token.starts_with(r#"""#) && token.ends_with(r#"""#) {
+    if token.starts_with('"') && token.ends_with('"') {
         let str = &token[1..token.len() - 1];
         let str = str.replace("\\\"", "\"")
             .replace("\\n", "\n")
             .replace("\\\\", "\\");
         return Ok(MalString(str));
     }
-    if token.starts_with(":") {
+    if token.starts_with(':') {
         return Ok(MalKeyword(token[1..].to_string()));
     }
     match token.as_ref() {

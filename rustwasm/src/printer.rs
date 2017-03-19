@@ -57,27 +57,27 @@ pub fn println(str: String) {
 }
 
 pub fn pr_str(v: &MalType, print_readably: bool) -> String {
-    match v {
-        &MalList(ref list, _) => {
+    match *v {
+        MalList(ref list, _) => {
             let value =
                 list.iter().map(|x| pr_str(x, print_readably)).collect::<Vec<_>>().join(" ");
             format!("({})", value)
         }
-        &MalVector(ref list, _) => {
+        MalVector(ref list, _) => {
             let value =
                 list.iter().map(|x| pr_str(x, print_readably)).collect::<Vec<_>>().join(" ");
             format!("[{}]", value)
         }
-        &MalHashMap(ref hash_map, _) => {
+        MalHashMap(ref hash_map, _) => {
             let mut ret = String::new();
             ret += "{";
             for (key, value) in hash_map {
                 if ret != "{" {
                     ret += " ";
                 }
-                let key = match key {
-                    &MalHashMapKey::MalString(ref v) => MalString(v.to_string()),
-                    &MalHashMapKey::MalKeyword(ref v) => MalKeyword(v.to_string()),
+                let key = match *key {
+                    MalHashMapKey::MalString(ref v) => MalString(v.to_string()),
+                    MalHashMapKey::MalKeyword(ref v) => MalKeyword(v.to_string()),
                 };
                 ret += &pr_str(&key, print_readably);
                 ret += " ";
@@ -86,10 +86,10 @@ pub fn pr_str(v: &MalType, print_readably: bool) -> String {
             ret += "}";
             ret
         }
-        &MalNumber(ref v) => format!("{}", v),
-        &MalSymbol(ref v) => format!("{}", v),
-        &MalBool(v) => format!("{}", v),
-        &MalString(ref v) => {
+        MalNumber(ref v) => format!("{}", v),
+        MalSymbol(ref v) => v.clone(),
+        MalBool(v) => format!("{}", v),
+        MalString(ref v) => {
             if print_readably {
                 let v = v.replace("\\", "\\\\")
                     .replace("\"", "\\\"")
@@ -99,9 +99,9 @@ pub fn pr_str(v: &MalType, print_readably: bool) -> String {
                 v.to_string()
             }
         }
-        &MalNil => "nil".to_string(),
-        &MalKeyword(ref v) => format!(":{}", v),
-        &MalFunc(_, _) => "#<function>".to_string(),
-        &MalAtom(ref v) => format!("(atom {})", pr_str(&v.borrow(), print_readably)),
+        MalNil => "nil".to_string(),
+        MalKeyword(ref v) => format!(":{}", v),
+        MalFunc(_, _) => "#<function>".to_string(),
+        MalAtom(ref v) => format!("(atom {})", pr_str(&v.borrow(), print_readably)),
     }
 }

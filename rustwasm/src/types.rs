@@ -37,9 +37,9 @@ impl fmt::Debug for MalType {
 
 impl MalType {
     pub fn hash_key(&self) -> Result<MalHashMapKey, MalError> {
-        match self {
-            &MalString(ref v) => Ok(MalHashMapKey::MalString(v.to_string())),
-            &MalKeyword(ref v) => Ok(MalHashMapKey::MalKeyword(v.to_string())),
+        match *self {
+            MalString(ref v) => Ok(MalHashMapKey::MalString(v.to_string())),
+            MalKeyword(ref v) => Ok(MalHashMapKey::MalKeyword(v.to_string())),
             _ => {
                 mal_error!(format!("unexpected symbol. expected: string or keyword, actual: {:?}",
                                    self))
@@ -59,9 +59,9 @@ pub fn vec_to_hash_map(args: Vec<MalType>) -> MalResult {
         let key = &kv[0];
         let value = &kv[1];
 
-        let key = match key {
-            &MalString(ref v) => MalHashMapKey::MalString(v.to_string()),
-            &MalKeyword(ref v) => MalHashMapKey::MalKeyword(v.to_string()),
+        let key = match *key {
+            MalString(ref v) => MalHashMapKey::MalString(v.to_string()),
+            MalKeyword(ref v) => MalHashMapKey::MalKeyword(v.to_string()),
             _ => {
                 return mal_error!(format!("unexpected symbol. expected: string or keyword, \
                                            actual: {:?}",
@@ -103,9 +103,9 @@ impl From<MalType> for MalError {
 
 impl fmt::Debug for MalError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let message = match self {
-            &ErrorMessage(ref message) => message.clone(),
-            &ThrowAST(ref ast) => format!("receive exception: {}", pr_str(ast, true)),
+        let message = match *self {
+            ErrorMessage(ref message) => message.clone(),
+            ThrowAST(ref ast) => format!("receive exception: {}", pr_str(ast, true)),
         };
         write!(f, "{}", message)
     }
@@ -150,7 +150,7 @@ impl MalFuncData {
                 return mal_error!(format!("unexpected argument length. expected: 1, actual: {}",
                                           args.len()));
             }
-            (container.eval)(args.get(0).unwrap().clone(), container.env.clone())
+            (container.eval)((&args[0]).clone(), container.env.clone())
         } else {
             mal_error!("undefined function".to_string())
         }

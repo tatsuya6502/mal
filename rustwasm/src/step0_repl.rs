@@ -27,12 +27,12 @@ pub fn rep(str: &str) -> Result<String, MalError> {
 pub fn run() {
     loop {
         let line = mal_readline("user> ");
-        if let None = line {
+        if line.is_none() {
             break;
         }
         let result = rep(&line.unwrap());
         match result {
-            Ok(message) => println(message),
+            Ok(message) |
             Err(MalError::ErrorMessage(message)) => println(message),
             Err(MalError::ThrowAST(ast)) => panic!("{:?}", ast),
         }

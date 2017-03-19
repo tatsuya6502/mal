@@ -20,7 +20,7 @@ fn read(str: String) -> MalResult {
 fn is_pair(ast: MalType) -> bool {
     match ast {
         MalList(list, _) |
-        MalVector(list, _) => list.len() != 0,
+        MalVector(list, _) => !list.is_empty(),
         _ => false,
     }
 }
@@ -37,7 +37,7 @@ fn quasiquote(ast: MalType) -> MalResult {
         Some(ast) => ast,
         None => return mal_error!("quasiquote: 1 or 2 argument(s) required".to_string()),
     };
-    if let &MalSymbol(ref symbol) = arg1 {
+    if let MalSymbol(ref symbol) = *arg1 {
         if symbol == "unquote" {
             match list.get(1) {
                 Some(ast) => return Ok(ast.clone()),
@@ -49,7 +49,7 @@ fn quasiquote(ast: MalType) -> MalResult {
     if is_pair(arg1.clone()) {
         let arg1_list = seq!(arg1.clone());
         if let Some(arg11) = arg1_list.get(0) {
-            if let &MalSymbol(ref symbol) = arg11 {
+            if let MalSymbol(ref symbol) = *arg11 {
                 if symbol == "splice-unquote" {
                     let arg12 = match arg1_list.get(1) {
                         Some(ast) => ast,
@@ -74,32 +74,32 @@ fn quasiquote(ast: MalType) -> MalResult {
                Box::new(None)))
 }
 
-fn eval_ast(ast: MalType, env: Env) -> MalResult {
+fn eval_ast(ast: MalType, env: &Env) -> MalResult {
     match ast {
         MalSymbol(ref v) => {
-            match env.clone().get(v.to_string()) {
+            match env.get(v.to_string()) {
                 Some(ast) => Ok(ast.clone()),
-                None => return mal_error!(format!("'{}' not found", v)),
+                None => mal_error!(format!("'{}' not found", v)),
             }
         }
         MalList(list, _) => {
             let mut new_list = vec![];
             for ast in list {
-                new_list.push(try!(eval(ast, env.clone())));
+                new_list.push(eval(ast, env.clone())?);
             }
             Ok(MalList(new_list, Box::new(None)))
         }
         MalVector(list, _) => {
             let mut new_list = vec![];
             for ast in list {
-                new_list.push(try!(eval(ast, env.clone())));
+                new_list.push(eval(ast, env.clone())?);
             }
             Ok(MalVector(new_list, Box::new(None)))
         }
         MalHashMap(hash_map, _) => {
             let mut new_hash_map: HashMap<MalHashMapKey, MalType> = HashMap::new();
-            for (key, value) in hash_map.iter() {
-                let value = try!(eval(value.clone(), env.clone()));
+            for (key, value) in hash_map {
+                let value = eval(value.clone(), env.clone())?;
                 new_hash_map.insert(key.clone(), value);
             }
 
@@ -117,7 +117,7 @@ fn eval(ast: MalType, env: Env) -> MalResult {
     'tco: loop {
         let list = match ast {
             MalList(list, _) => list,
-            _ => return eval_ast(ast.clone(), env),
+            _ => return eval_ast(ast.clone(), &env),
         };
 
         if list.is_empty() {
@@ -125,12 +125,12 @@ fn eval(ast: MalType, env: Env) -> MalResult {
         }
 
         {
-            let a0 = list.get(0).unwrap();
-            match a0 {
-                &MalSymbol(ref v) if v == "def!" => {
+            let a0 = &list[0];
+            match *a0 {
+                MalSymbol(ref v) if v == "def!" => {
                     let key = &list[1];
-                    let key = match key {
-                        &MalSymbol(ref v) => v,
+                    let key = match *key {
+                        MalSymbol(ref v) => v,
                         _ => {
                             return mal_error!(format!("unexpected symbol. expected: symbol, \
                                                        actual: {:?}",
@@ -138,32 +138,32 @@ fn eval(ast: MalType, env: Env) -> MalResult {
                         }
                     };
                     let value = &list[2];
-                    let ret = try!(eval(value.clone(), env.clone()));
+                    let ret = eval(value.clone(), env.clone())?;
                     return Ok(env.set(key.to_string(), ret));
                 }
-                &MalSymbol(ref v) if v == "let*" => {
-                    env = try!(Env::new(Some(env.clone()), vec![], vec![]));
+                MalSymbol(ref v) if v == "let*" => {
+                    env = Env::new(Some(env.clone()), vec![], vec![])?;
                     let pairs = &list[1];
                     let expr = &list[2];
                     let list = seq!(pairs.clone());
                     for kv in list.chunks(2) {
                         let key = &kv[0];
                         let value = &kv[1];
-                        let key = match key {
-                            &MalSymbol(ref v) => v,
+                        let key = match *key {
+                            MalSymbol(ref v) => v,
                             _ => {
                                 return mal_error!(format!("unexpected symbol. expected: symbol, \
                                                            actual: {:?}",
                                                           key))
                             }
                         };
-                        env.set(key.to_string(), try!(eval(value.clone(), env.clone())));
+                        env.set(key.to_string(), eval(value.clone(), env.clone())?);
                     }
 
                     ast = expr.clone();
                     continue 'tco;
                 }
-                &MalSymbol(ref v) if v == "quote" => {
+                MalSymbol(ref v) if v == "quote" => {
                     let arg = list.get(1);
                     let arg = match arg {
                         Some(v) => v,
@@ -171,23 +171,23 @@ fn eval(ast: MalType, env: Env) -> MalResult {
                     };
                     return Ok(arg.clone());
                 }
-                &MalSymbol(ref v) if v == "quasiquote" => {
+                MalSymbol(ref v) if v == "quasiquote" => {
                     let arg = list.get(1);
                     let arg = match arg {
                         Some(v) => v,
                         None => return mal_error!("quasiquote argument is required".to_string()),
                     };
-                    ast = try!(quasiquote(arg.clone()));
+                    ast = quasiquote(arg.clone())?;
                     continue 'tco;
                 }
-                &MalSymbol(ref v) if v == "do" => {
+                MalSymbol(ref v) if v == "do" => {
                     let len = list.len();
                     let exprs = &list[1..(len - 1)];
-                    try!(eval_ast(MalList(exprs.to_vec(), Box::new(None)), env.clone()));
+                    eval_ast(MalList(exprs.to_vec(), Box::new(None)), &env)?;
                     ast = list[list.len() - 1].clone();
                     continue 'tco;
                 }
-                &MalSymbol(ref v) if v == "if" => {
+                MalSymbol(ref v) if v == "if" => {
                     let cond = list.get(1);
                     let cond = match cond {
                         Some(v) => v,
@@ -200,7 +200,7 @@ fn eval(ast: MalType, env: Env) -> MalResult {
                     };
                     let else_expr = list.get(3);
 
-                    let b = match try!(eval(cond.clone(), env.clone())) {
+                    let b = match eval(cond.clone(), env.clone())? {
                         MalBool(false) | MalNil => false,
                         _ => true,
                     };
@@ -213,7 +213,7 @@ fn eval(ast: MalType, env: Env) -> MalResult {
                     }
                     continue 'tco;
                 }
-                &MalSymbol(ref v) if v == "fn*" => {
+                MalSymbol(ref v) if v == "fn*" => {
                     let binds = list.get(1);
                     let binds = match binds {
                         Some(v) => v,
@@ -233,7 +233,7 @@ fn eval(ast: MalType, env: Env) -> MalResult {
             };
         }
 
-        let ret = try!(eval_ast(MalList(list, Box::new(None)), env.clone()));
+        let ret = eval_ast(MalList(list, Box::new(None)), &env)?;
         let list = seq!(ret);
         if list.is_empty() {
             return mal_error!("unexpected state: len == 0".to_string());
@@ -241,13 +241,13 @@ fn eval(ast: MalType, env: Env) -> MalResult {
 
         let f = &list[0];
         let args = (&list[1..]).to_vec();
-        let f = match f {
-            &MalFunc(ref f, _) => f,
+        let f = match *f {
+            MalFunc(ref f, _) => f,
             _ => {
                 return mal_error!(format!("unexpected symbol. expected: function, actual: {:?}", f))
             }
         };
-        if let Some(v) = try!(f.tco_apply(args.clone())) {
+        if let Some(v) = f.tco_apply(args.clone())? {
             ast = v.0;
             env = v.1;
             continue 'tco;
@@ -257,14 +257,14 @@ fn eval(ast: MalType, env: Env) -> MalResult {
 }
 
 // PRINT
-fn print(exp: MalType) -> Result<String, MalError> {
-    Ok(pr_str(&exp, true))
+fn print(exp: &MalType) -> Result<String, MalError> {
+    Ok(pr_str(exp, true))
 }
 
 pub fn rep(str: &str, env: &Env) -> Result<String, MalError> {
     let ast = try!(read(str.to_string()));
     let exp = try!(eval(ast, env.clone()));
-    print(exp)
+    print(&exp)
 }
 
 fn rep_or_panic(str: &str, env: &Env, line: u32) {
@@ -275,23 +275,23 @@ pub fn new_repl_env() -> Env {
     let repl_env = Env::new(None, vec![], vec![]).unwrap();
 
     // core.EXT: defined using Racket
-    for (key, value) in core::ns().iter() {
+    for (key, value) in core::ns() {
         repl_env.set(key.to_string(), value.clone());
     }
     repl_env.set("*ARGV*".to_string(), MalList(vec![], Box::new(None)));
     repl_env.set("eval".to_string(), func_for_eval(eval, repl_env.clone()));
 
     // core.mal: defined using the language itself
-    rep_or_panic("(def! not (fn* (a) (if a false true)))",
-                 &repl_env, line!());
+    rep_or_panic("(def! not (fn* (a) (if a false true)))", &repl_env, line!());
     rep_or_panic(r##"(def! load-file (fn* (f) (eval (read-string (str "(do " (slurp f) ")")))))"##,
-                 &repl_env, line!());
+                 &repl_env,
+                 line!());
 
     repl_env
 }
 
 #[cfg(not(target_arch="wasm32"))]
-fn load_file(source: String, env: &Env) {
+fn load_file(source: &str, env: &Env) {
     let load = format!(r##"(load-file "{}")"##, source);
     let ret = rep(&load, env);
     match ret {
@@ -304,35 +304,35 @@ fn load_file(source: String, env: &Env) {
 }
 
 #[cfg(target_arch="wasm32")]
-fn load_file(_source: String, _env: &Env) {
+fn load_file(_source: &str, _env: &Env) {
     unimplemented!()
 }
 
-pub fn run(args: Vec<String>) {
+pub fn run(args: &[String]) {
     let repl_env = new_repl_env();
 
     if 2 <= args.len() {
-        let source = args.get(1).unwrap();
+        let source = &args[1];
 
         let args = args.iter().skip(2).map(|str| MalString(str.clone())).collect::<Vec<_>>();
         repl_env.set("*ARGV*".to_string(), MalList(args, Box::new(None)));
 
-        load_file(source.to_string(), &repl_env);
+        load_file(source, &repl_env);
         return;
     }
 
     loop {
         let line = mal_readline("user> ");
-        if let None = line {
+        if line.is_none() {
             break;
         }
         let result = rep(&line.unwrap(), &repl_env);
         match result {
-            Ok(message) => println(message),
+            Ok(message) |
             Err(MalError::ErrorMessage(message)) => println(message),
             Err(MalError::ThrowAST(ref ast)) => {
                 println(format!("receive exception: {}", pr_str(ast, true)))
             }
-        }
+        };
     }
 }

@@ -15,32 +15,32 @@ fn read(str: String) -> MalResult {
     read_str(str).or_else(|e| mal_error!(e))
 }
 
-fn eval_ast(ast: MalType, env: Env) -> MalResult {
+fn eval_ast(ast: MalType, env: &Env) -> MalResult {
     match ast {
         MalSymbol(ref v) => {
-            match env.clone().get(v.to_string()) {
+            match env.get(v.to_string()) {
                 Some(ast) => Ok(ast.clone()),
-                None => return mal_error!(format!("'{}' not found", v)),
+                None => mal_error!(format!("'{}' not found", v)),
             }
         }
         MalList(list, _) => {
             let mut new_list = vec![];
             for ast in list {
-                new_list.push(try!(eval(ast, env.clone())));
+                new_list.push(eval(ast, env.clone())?);
             }
             Ok(MalList(new_list, Box::new(None)))
         }
         MalVector(list, _) => {
             let mut new_list = vec![];
             for ast in list {
-                new_list.push(try!(eval(ast, env.clone())));
+                new_list.push(eval(ast, env.clone())?);
             }
             Ok(MalVector(new_list, Box::new(None)))
         }
         MalHashMap(hash_map, _) => {
             let mut new_hash_map: HashMap<MalHashMapKey, MalType> = HashMap::new();
-            for (key, value) in hash_map.iter() {
-                let value = try!(eval(value.clone(), env.clone()));
+            for (key, value) in hash_map {
+                let value = eval(value.clone(), env.clone())?;
                 new_hash_map.insert(key.clone(), value);
             }
 
@@ -58,7 +58,7 @@ fn eval(ast: MalType, env: Env) -> MalResult {
     'tco: loop {
         let list = match ast {
             MalList(list, _) => list,
-            _ => return eval_ast(ast.clone(), env),
+            _ => return eval_ast(ast.clone(), &env),
         };
 
         if list.is_empty() {
@@ -66,12 +66,12 @@ fn eval(ast: MalType, env: Env) -> MalResult {
         }
 
         {
-            let a0 = list.get(0).unwrap();
-            match a0 {
-                &MalSymbol(ref v) if v == "def!" => {
+            let a0 = &list[0];
+            match *a0 {
+                MalSymbol(ref v) if v == "def!" => {
                     let key = &list[1];
-                    let key = match key {
-                        &MalSymbol(ref v) => v,
+                    let key = match *key {
+                        MalSymbol(ref v) => v,
                         _ => {
                             return mal_error!(format!("unexpected symbol. expected: symbol, \
                                                        actual: {:?}",
@@ -79,39 +79,39 @@ fn eval(ast: MalType, env: Env) -> MalResult {
                         }
                     };
                     let value = &list[2];
-                    let ret = try!(eval(value.clone(), env.clone()));
+                    let ret = eval(value.clone(), env.clone())?;
                     return Ok(env.set(key.to_string(), ret));
                 }
-                &MalSymbol(ref v) if v == "let*" => {
-                    env = try!(Env::new(Some(env.clone()), vec![], vec![]));
+                MalSymbol(ref v) if v == "let*" => {
+                    env = Env::new(Some(env.clone()), vec![], vec![])?;
                     let pairs = &list[1];
                     let expr = &list[2];
                     let list = seq!(pairs.clone());
                     for kv in list.chunks(2) {
                         let key = &kv[0];
                         let value = &kv[1];
-                        let key = match key {
-                            &MalSymbol(ref v) => v,
+                        let key = match *key {
+                            MalSymbol(ref v) => v,
                             _ => {
                                 return mal_error!(format!("unexpected symbol. expected: symbol, \
                                                            actual: {:?}",
                                                           key))
                             }
                         };
-                        env.set(key.to_string(), try!(eval(value.clone(), env.clone())));
+                        env.set(key.to_string(), eval(value.clone(), env.clone())?);
                     }
 
                     ast = expr.clone();
                     continue 'tco;
                 }
-                &MalSymbol(ref v) if v == "do" => {
+                MalSymbol(ref v) if v == "do" => {
                     let len = list.len();
                     let exprs = &list[1..(len - 1)];
-                    try!(eval_ast(MalList(exprs.to_vec(), Box::new(None)), env.clone()));
+                    eval_ast(MalList(exprs.to_vec(), Box::new(None)), &env)?;
                     ast = list[list.len() - 1].clone();
                     continue 'tco;
                 }
-                &MalSymbol(ref v) if v == "if" => {
+                MalSymbol(ref v) if v == "if" => {
                     let cond = list.get(1);
                     let cond = match cond {
                         Some(v) => v,
@@ -124,7 +124,7 @@ fn eval(ast: MalType, env: Env) -> MalResult {
                     };
                     let else_expr = list.get(3);
 
-                    let b = match try!(eval(cond.clone(), env.clone())) {
+                    let b = match eval(cond.clone(), env.clone())? {
                         MalBool(false) | MalNil => false,
                         _ => true,
                     };
@@ -137,7 +137,7 @@ fn eval(ast: MalType, env: Env) -> MalResult {
                     }
                     continue 'tco;
                 }
-                &MalSymbol(ref v) if v == "fn*" => {
+                MalSymbol(ref v) if v == "fn*" => {
                     let binds = list.get(1);
                     let binds = match binds {
                         Some(v) => v,
@@ -157,7 +157,7 @@ fn eval(ast: MalType, env: Env) -> MalResult {
             };
         }
 
-        let ret = try!(eval_ast(MalList(list, Box::new(None)), env.clone()));
+        let ret = eval_ast(MalList(list, Box::new(None)), &env)?;
         let list = seq!(ret);
         if list.is_empty() {
             return mal_error!("unexpected state: len == 0".to_string());
@@ -165,13 +165,13 @@ fn eval(ast: MalType, env: Env) -> MalResult {
 
         let f = &list[0];
         let args = (&list[1..]).to_vec();
-        let f = match f {
-            &MalFunc(ref f, _) => f,
+        let f = match *f {
+            MalFunc(ref f, _) => f,
             _ => {
                 return mal_error!(format!("unexpected symbol. expected: function, actual: {:?}", f))
             }
         };
-        if let Some(v) = try!(f.tco_apply(args.clone())) {
+        if let Some(v) = f.tco_apply(args.clone())? {
             ast = v.0;
             env = v.1;
             continue 'tco;
@@ -181,14 +181,14 @@ fn eval(ast: MalType, env: Env) -> MalResult {
 }
 
 // PRINT
-fn print(exp: MalType) -> Result<String, MalError> {
-    Ok(pr_str(&exp, true))
+fn print(exp: &MalType) -> Result<String, MalError> {
+    Ok(pr_str(exp, true))
 }
 
 pub fn rep(str: &str, env: &Env) -> Result<String, MalError> {
     let ast = try!(read(str.to_string()));
     let exp = try!(eval(ast, env.clone()));
-    print(exp)
+    print(&exp)
 }
 
 fn rep_or_panic(str: &str, env: &Env, line: u32) {
@@ -199,13 +199,12 @@ pub fn new_repl_env() -> Env {
     let repl_env = Env::new(None, vec![], vec![]).unwrap();
 
     // core.EXT: defined using Racket
-    for (key, value) in core::ns().iter() {
+    for (key, value) in core::ns() {
         repl_env.set(key.to_string(), value.clone());
     }
 
     // core.mal: defined using the language itself
-    rep_or_panic("(def! not (fn* (a) (if a false true)))",
-                 &repl_env, line!());
+    rep_or_panic("(def! not (fn* (a) (if a false true)))", &repl_env, line!());
 
     repl_env
 }
@@ -215,16 +214,16 @@ pub fn run() {
 
     loop {
         let line = mal_readline("user> ");
-        if let None = line {
+        if line.is_none() {
             break;
         }
         let result = rep(&line.unwrap(), &repl_env);
         match result {
-            Ok(message) => println(message),
+            Ok(message) |
             Err(MalError::ErrorMessage(message)) => println(message),
             Err(MalError::ThrowAST(ref ast)) => {
                 println(format!("receive exception: {}", pr_str(ast, true)))
             }
-        }
+        };
     }
 }
