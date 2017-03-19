@@ -55,12 +55,9 @@ pub fn vec_to_hash_map(args: Vec<MalType>) -> MalResult {
 
     let mut new_hash_map: HashMap<MalHashMapKey, MalType> = HashMap::new();
 
-    for i in 0..args.len() {
-        if i % 2 == 1 {
-            continue;
-        }
-        let key = args.get(i).unwrap();
-        let value = args.get(i + 1).unwrap();
+    for kv in args.chunks(2) {
+        let key = &kv[0];
+        let value = &kv[1];
 
         let key = match key {
             &MalString(ref v) => MalHashMapKey::MalString(v.to_string()),
