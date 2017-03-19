@@ -26,14 +26,14 @@ fn eval_ast(ast: MalType, env: &Env) -> MalResult {
             }
         }
         MalList(list, _) => {
-            let mut new_list = vec![];
+            let mut new_list = Vec::new();
             for ast in list {
                 new_list.push(eval(ast, env.clone())?);
             }
             Ok(MalList(new_list, Box::new(None)))
         }
         MalVector(list, _) => {
-            let mut new_list = vec![];
+            let mut new_list = Vec::new();
             for ast in list {
                 new_list.push(eval(ast, env.clone())?);
             }
@@ -85,7 +85,7 @@ fn eval(ast: MalType, env: Env) -> MalResult {
                     return Ok(env.set(key.to_string(), ret));
                 }
                 MalSymbol(ref v) if v == "let*" => {
-                    env = Env::new(Some(env.clone()), vec![], vec![])?;
+                    env = Env::new(Some(env.clone()), Vec::new(), Vec::new())?;
                     let pairs = &list[1];
                     let expr = &list[2];
                     let list = seq!(pairs.clone());
@@ -198,13 +198,13 @@ fn rep_or_panic(str: &str, env: &Env, line: u32) {
 }
 
 pub fn new_repl_env() -> Env {
-    let repl_env = Env::new(None, vec![], vec![]).unwrap();
+    let repl_env = Env::new(None, Vec::new(), Vec::new()).unwrap();
 
     // core.EXT: defined using Racket
     for (key, value) in core::ns() {
         repl_env.set(key.to_string(), value.clone());
     }
-    repl_env.set("*ARGV*".to_string(), MalList(vec![], Box::new(None)));
+    repl_env.set("*ARGV*".to_string(), MalList(Vec::new(), Box::new(None)));
     repl_env.set("eval".to_string(), func_for_eval(eval, repl_env.clone()));
 
     // core.mal: defined using the language itself

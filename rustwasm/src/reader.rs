@@ -46,7 +46,7 @@ fn tokenizer(str: String) -> Vec<String> {
     let regexp =
         Regex::new(r##"[\s,]*(~@|[\[\]{}()'`~^@]|"(?:\\.|[^\\"])*"|;.*|[^\s\[\]{}('"`,;)]*)"##)
             .unwrap();
-    let mut tokens = vec![];
+    let mut tokens = Vec::new();
     for cap in regexp.captures_iter(&str) {
         let group = match cap.get(1) {
             None => break,
@@ -80,7 +80,7 @@ mod jstokenizer {
 
     impl JSTokenizer {
         pub fn new() -> JSTokenizer {
-            JSTokenizer { list: vec![] }
+            JSTokenizer { list: Vec::new() }
         }
 
         pub fn call_js(&mut self, str: String) -> Vec<String> {
@@ -90,7 +90,7 @@ mod jstokenizer {
 
             unsafe { CString::from_raw(str) };
 
-            let mut ret_vec = vec![];
+            let mut ret_vec = Vec::new();
             for str in self.list.clone() {
                 ret_vec.push(str.to_string());
             }
@@ -151,7 +151,7 @@ fn read_list(reader: &mut Reader) -> MalResult {
         return mal_error!(format!("unexpected token {}, expected (", token));
     }
 
-    let mut list: Vec<MalType> = vec![];
+    let mut list: Vec<MalType> = Vec::new();
     loop {
         let next = reader.peek()?;
         if next == ")" {
@@ -171,7 +171,7 @@ fn read_vector(reader: &mut Reader) -> MalResult {
         return mal_error!(format!("unexpected token {}, expected [", token));
     }
 
-    let mut list: Vec<MalType> = vec![];
+    let mut list: Vec<MalType> = Vec::new();
     loop {
         let next = reader.peek()?;
         if next == "]" {
@@ -191,7 +191,7 @@ fn read_hash_map(reader: &mut Reader) -> MalResult {
         return mal_error!(format!("unexpected token {}, expected {{", token));
     }
 
-    let mut list: Vec<MalType> = vec![];
+    let mut list: Vec<MalType> = Vec::new();
     loop {
         let next = reader.peek()?;
         if next == "}" {

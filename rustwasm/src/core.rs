@@ -536,7 +536,7 @@ fn keys(args: Vec<MalType>) -> MalResult {
         _ => return mal_error!(format!("unexpected symbol. expected: hash-map, actual: {:?}", v)),
     };
 
-    let mut ret = vec![];
+    let mut ret = Vec::new();
     for key in hash_map.keys() {
         let key = match *key {
             MalHashMapKey::MalString(ref v) => MalString(v.to_string()),
@@ -558,7 +558,7 @@ fn vals(args: Vec<MalType>) -> MalResult {
         _ => return mal_error!(format!("unexpected symbol. expected: hash-map, actual: {:?}", v)),
     };
 
-    let mut ret = vec![];
+    let mut ret = Vec::new();
     for value in hash_map.values() {
         ret.push(value.clone());
     }
@@ -592,7 +592,7 @@ fn cons(args: Vec<MalType>) -> MalResult {
 }
 
 fn concat(args: Vec<MalType>) -> MalResult {
-    let mut list = vec![];
+    let mut list = Vec::new();
 
     for v in args {
         let v = seq!(v);
@@ -654,12 +654,12 @@ fn rest(args: Vec<MalType>) -> MalResult {
     let list = &args[0];
 
     if list == &MalNil {
-        return Ok(MalList(vec![], Box::new(None)));
+        return Ok(MalList(Vec::new(), Box::new(None)));
     };
 
     let list = seq!(list.clone());
     if list.is_empty() {
-        return Ok(MalList(vec![], Box::new(None)));
+        return Ok(MalList(Vec::new(), Box::new(None)));
     }
 
     Ok(MalList((&list[1..]).to_vec(), Box::new(None)))
@@ -726,7 +726,7 @@ fn map(args: Vec<MalType>) -> MalResult {
     let list = &args[1];
     let list = seq!(list.clone());
 
-    let mut ret = vec![];
+    let mut ret = Vec::new();
     for v in list {
         let v = f.apply(vec![v])?;
         ret.push(v);
@@ -744,7 +744,7 @@ fn conj(args: Vec<MalType>) -> MalResult {
 
     let ret = match *list {
         MalList(ref list, _) => {
-            let mut ret_list: Vec<MalType> = vec![];
+            let mut ret_list: Vec<MalType> = Vec::new();
             for v in args.iter().skip(1) {
                 let mut temp_list: Vec<MalType> = vec![v.clone()];
                 temp_list.extend(ret_list);
@@ -757,7 +757,7 @@ fn conj(args: Vec<MalType>) -> MalResult {
             MalList(ret_list, Box::new(None))
         }
         MalVector(ref list, _) => {
-            let mut ret_list: Vec<MalType> = vec![];
+            let mut ret_list: Vec<MalType> = Vec::new();
             ret_list.extend(list.clone());
             ret_list.extend((&args[1..]).to_vec());
 

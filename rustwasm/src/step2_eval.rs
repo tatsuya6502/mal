@@ -22,14 +22,14 @@ fn eval_ast(ast: MalType, env: &Env) -> MalResult {
             }
         }
         MalList(list, _) => {
-            let mut new_list = vec![];
+            let mut new_list = Vec::new();
             for ast in list {
                 new_list.push(eval(ast, env.clone())?);
             }
             Ok(MalList(new_list, Box::new(None)))
         }
         MalVector(list, _) => {
-            let mut new_list = vec![];
+            let mut new_list = Vec::new();
             for ast in list {
                 new_list.push(eval(ast, env.clone())?);
             }

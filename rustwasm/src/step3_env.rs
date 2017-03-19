@@ -23,14 +23,14 @@ fn eval_ast(ast: MalType, env: &Env) -> MalResult {
             }
         }
         MalList(list, _) => {
-            let mut new_list = vec![];
+            let mut new_list = Vec::new();
             for ast in list {
                 new_list.push(eval(ast, env.clone())?);
             }
             Ok(MalList(new_list, Box::new(None)))
         }
         MalVector(list, _) => {
-            let mut new_list = vec![];
+            let mut new_list = Vec::new();
             for ast in list {
                 new_list.push(eval(ast, env.clone())?);
             }
@@ -77,7 +77,7 @@ fn eval(ast: MalType, env: Env) -> MalResult {
                 return Ok(env.set(key.to_string(), ret));
             }
             MalSymbol(ref v) if v == "let*" => {
-                let let_env = try!(Env::new(Some(env), vec![], vec![]));
+                let let_env = try!(Env::new(Some(env), Vec::new(), Vec::new()));
                 let pairs = &list[1];
                 let expr = &list[2];
                 let list = seq!(pairs.clone());
@@ -180,7 +180,7 @@ fn div(args: Vec<MalType>) -> MalResult {
 }
 
 pub fn run() {
-    let repl_env = Env::new(None, vec![], vec![]).unwrap();
+    let repl_env = Env::new(None, Vec::new(), Vec::new()).unwrap();
     repl_env.set("+".to_string(), types::func_from_bootstrap(add));
     repl_env.set("-".to_string(), types::func_from_bootstrap(sub));
     repl_env.set("*".to_string(), types::func_from_bootstrap(mul));

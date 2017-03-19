@@ -188,7 +188,7 @@ pub fn func_from_lisp(eval: fn(ast: MalType, env: Env) -> MalResult,
                       binds: Vec<MalType>,
                       exprs: MalType)
                       -> MalResult {
-    let mut bind_strs: Vec<String> = vec![];
+    let mut bind_strs: Vec<String> = Vec::new();
     for bind in binds {
         if let MalSymbol(v) = bind {
             bind_strs.push(v);
